@@ -31,7 +31,7 @@ class Restaurant(models.Model):
 
 class Menu_Detail(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField()
+    image = models.ImageField(null=True)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     content = models.TextField(max_length=1000, verbose_name="menu_detail_content")
     def __str__(self):
