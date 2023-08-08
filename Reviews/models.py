@@ -23,7 +23,7 @@ class Likes(models.Model):
     
     def __str__(self):
         return self.likes
-
+#수정
 class Review_Likes(models.Model):
     review = models.ForeignKey(Review, on_delete=models.CASCADE,related_name="review_review_likes")
     likes = models.ForeignKey(Likes, on_delete=models.CASCADE,related_name="likes_review_likes")
