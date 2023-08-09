@@ -26,7 +26,9 @@ class UserManager(BaseUserManager):
         
 class Country(models.Model):
     name = models.CharField(max_length=100, verbose_name="country_name")
-
+    def __str__(self):
+        return self.name
+    
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=255, unique=True, null=False)
     country = models.ForeignKey(Country,on_delete=models.CASCADE, related_name='user_country',null=True )
