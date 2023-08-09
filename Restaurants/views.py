@@ -60,18 +60,31 @@ class RestaurantsBaseAPIView(APIView):
         naver_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
         user_review_count = Review_Restaurant.objects.filter(restaurant = restaurant_base).exclude(review__user=naver_user).count()
         user_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).count()
+        
         #restuarant에서 모든 food를 타고 올라가서 category를 출력 해준다
         base_food = Restaurant_Food.objects.filter(restaurant=restaurant_base)
         for food_relation in base_food:
             categories = food_relation.food.category.name
+        
+        
         restaurant_latitude = restaurant_base.latitude
         restaurant_longtitude = restaurant_base.longitude
+        
         # 추후 api받아와서 설정 할 것
         current_latitude = 0
         current_longtitude =0
         #계산
         distance = geopy.distance.distance((current_latitude,current_longtitude), (restaurant_latitude,restaurant_longtitude)).m
+        
+        # NAVER인 놈들이랑 아닌놈들 중에 Likes별 가장 많이 받은것들 이름 뽑아주고 개수 정렬해서 만들어주기
+        # 
+        naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')[:5]
+        user_review_likes = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')[:5]
+        naver_likes_data = [{'content': like.likes.likes, 'count': like.likes_review_likes.count()} for like in naver_review_likes]
+        user_likes_data = [{'content': like.likes.likes, 'count': like.likes_review_likes.count()} for like in user_review_likes]
+
         data = {
+            'image' : restaurant_base.image,
             'name' : restaurant_base.name,
             'phone' : restaurant_base.phone,
             'address' : restaurant_base.address,
@@ -81,5 +94,9 @@ class RestaurantsBaseAPIView(APIView):
             'user_koogle' : koogle_cal(user_review_count , user_review_likes_count),
             'category':categories,
             'distance' : distance,
+            'naver_likes_data' : naver_likes_data,
+            'user_likes_data' : user_likes_data,
+            
         }
         return Response(data)
+

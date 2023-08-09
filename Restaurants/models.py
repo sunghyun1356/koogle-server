@@ -1,5 +1,6 @@
 from django.db import models
 from enum import unique
+from rest_framework.exceptions import ValidationError
 # Create your models here.
 
 
@@ -22,11 +23,17 @@ class Restaurant(models.Model):
     open_close_time = models.TextField(max_length=1000, verbose_name="open_close_time", null=True)
     image = models.ImageField(upload_to="", default='media/default_image.jpeg')
     phone = models.CharField(max_length=20, verbose_name="phone")
-    link = models.URLField(max_length=200)
+    map_link = models.URLField(max_length=200)
     latitude = models.FloatField(max_length=100, null=False)
     longitude= models.FloatField(max_length=100, null=False)
     koogle_ranking = models.IntegerField(verbose_name="koogle_ranking")
-    reservation = models.BooleanField(verbose_name="reservation", null=False)
+    reservation = models.BooleanField(verbose_name="reservation", default=False)
+    reservation_link = models.URLField(verbose_name="reservation_url", null=True, blank=True)
+
+    def clean(self):
+        if self.reservation and not self.reservation_link:
+            raise ValidationError("Reservation link is required when reservation is true.")
+    reservation_link = models.URLField(verbose_name="reservation_url", null=True,blank=None)
     def __str__(self):
         return self.name
 
