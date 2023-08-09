@@ -10,6 +10,7 @@ django-cors-headers = "*"
 django-environ = "*"
 python-dotenv = "*"
 pillow = "*"
+geopy = "*"
 
 [dev-packages]
 
