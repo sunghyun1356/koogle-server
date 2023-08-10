@@ -13,7 +13,7 @@ class Review(models.Model):
     image_3 = models.ImageField(upload_to="", null=True)
     created_at = models.DateTimeField(auto_created=True)
     koogle = models.IntegerField(verbose_name="koogle")
-    
+    star = models.IntegerField(verbose_name="star")
     def __str__(self):
          return f"Overall review for {self.restaurant.name} written by{self.user.username}"
     

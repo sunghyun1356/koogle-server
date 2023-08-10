@@ -1,6 +1,7 @@
 from django.shortcuts import render
 import datetime
 import geopy.distance
+from collections import Counter
 
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
@@ -75,16 +76,39 @@ class RestaurantsBaseAPIView(APIView):
         current_longtitude =0
         #계산
         distance = geopy.distance.distance((current_latitude,current_longtitude), (restaurant_latitude,restaurant_longtitude)).m
-        
+        # 이미지 없을시 설정
+        if restaurant_base.image == None:
+            restaurant_base.image = "None"
         # NAVER인 놈들이랑 아닌놈들 중에 Likes별 가장 많이 받은것들 이름 뽑아주고 개수 정렬해서 만들어주기
-        # 
-        naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')[:5]
-        user_review_likes = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')[:5]
-        naver_likes_data = [{'content': like.likes.likes, 'count': like.likes_review_likes.count()} for like in naver_review_likes]
-        user_likes_data = [{'content': like.likes.likes, 'count': like.likes_review_likes.count()} for like in user_review_likes]
+        # review_likes에서 likes_id별로 정렬하는데 이것의 수가 많은대로 정렬하고, 하나하나씩 몇개있는지 뽑아준다
+        naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')
+        #Counter사용으로 id별로 개수를 세어준다
+        naver_likes_counter = Counter(like.likes.id for like in naver_review_likes)
+        #Counter가 tuple형식이니 x[1] -> 개수별로 내림차순으로 만들어준다
+        sorted_naver_likes = sorted(naver_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
+        naver_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_naver_likes]
+        
+        user_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')
+        user_likes_counter = Counter(like.likes.id for like in user_review_likes)
+        sorted_user_likes = sorted(user_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
+        user_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_user_likes]
+
+        restaurant_menu = Menu.objects.filter(restaurant=restaurant_base)
+        # __in은 foreign키로 연결되어있을때 역참조를 위한 것
+        menu_detail = Menu_Detail.objects.filter(menu__in=restaurant_menu)
+        menus=[]
+        for detail in menu_detail:
+            menus.append({
+                'name' : detail.name,
+                'price': detail.price,
+                'conetent' : detail.content,
+            })
+        # 이미지 추가 예정
+        
+
 
         data = {
-            'image' : restaurant_base.image,
+            #이미지 파일 넣으면 postman에서 오류떠서 나중에 넣을게욤
             'name' : restaurant_base.name,
             'phone' : restaurant_base.phone,
             'address' : restaurant_base.address,
@@ -96,6 +120,8 @@ class RestaurantsBaseAPIView(APIView):
             'distance' : distance,
             'naver_likes_data' : naver_likes_data,
             'user_likes_data' : user_likes_data,
+            'restaurant_map_url' : restaurant_base.map_link,
+            'restaurant_menu' : menus,
             
         }
         return Response(data)

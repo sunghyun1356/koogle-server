@@ -33,6 +33,7 @@ class Restaurant(models.Model):
     def clean(self):
         if self.reservation and not self.reservation_link:
             raise ValidationError("Reservation link is required when reservation is true.")
+    
     reservation_link = models.URLField(verbose_name="reservation_url", null=True,blank=None)
     def __str__(self):
         return self.name
@@ -47,9 +48,9 @@ class Menu_Detail(models.Model):
     
 class Menu(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    food = models.ManyToManyField(Menu_Detail)
+    menu_detail = models.ForeignKey(Menu_Detail, on_delete=models.CASCADE)
     def __str__(self):
-        return f'{self.food.name} is in {self.restaurant.name}menu'
+        return f'{self.menu_detail.name} is in {self.restaurant.name}menu'
 
 class Restaurant_Food(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="restaurant_food_restaurant")
