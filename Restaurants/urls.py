@@ -8,5 +8,4 @@ router = DefaultRouter()
 urlpatterns =[
     path('', include(router.urls)),
     path('<str:restaurant_name>/', RestaurantsBaseAPIView.as_view()),
-    
 ]

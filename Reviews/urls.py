@@ -1,0 +1,13 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import *
+
+router = DefaultRouter()
+
+
+urlpatterns =[
+    path('', include(router.urls)),
+    path('<str:restaurant_name>/review_base/', ReviewBaseAPIView.as_view()),
+    path('<str:restaurant_name>/review_detail/<str:order_by>/', ReviewListInfoAPIView.as_view()),
+
+]

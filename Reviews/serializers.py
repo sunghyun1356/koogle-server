@@ -3,9 +3,18 @@ from rest_framework import serializers
 from .models import *
 from Users.models import User
 
-#기본적 네이버 리뷰 보여주기 
+#기본적 리뷰 보여주기 
 class ReviewNaverBaseSerializer(serializers.ModelSerializer):
-    pass
-#기본적 유저 리뷰 보여주기 + 작성하기
+    class Meta:
+        model = Review
+        fields ='__all__'
+#리뷰작성하기 + 작성하기
 class ReviewUserBaseSerializer(serializers.ModelSerializer):
-    pass
+    class Meta:
+        model = Review
+        fields ='__all__'
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields ='__all__'
