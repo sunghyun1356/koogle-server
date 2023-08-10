@@ -53,58 +53,58 @@ class RestaurantsBaseAPIView(APIView):
             raise NotFound("Restaurant not found")
         
         try:
-            naver_user = User.objects.get(username='NAVER')
+            naver_users = User.objects.filter(is_staff=True)
         except User.DoesNotExist:
             raise NotFound("User not found")
-        
-        naver_review_count = Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
-        naver_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
-        user_review_count = Review_Restaurant.objects.filter(restaurant = restaurant_base).exclude(review__user=naver_user).count()
-        user_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).count()
-        
-        #restuarant에서 모든 food를 타고 올라가서 category를 출력 해준다
-        base_food = Restaurant_Food.objects.filter(restaurant=restaurant_base)
-        for food_relation in base_food:
-            categories = food_relation.food.category.name
-        
-        
-        restaurant_latitude = restaurant_base.latitude
-        restaurant_longtitude = restaurant_base.longitude
-        
-        # 추후 api받아와서 설정 할 것
-        current_latitude = 0
-        current_longtitude =0
-        #계산
-        distance = geopy.distance.distance((current_latitude,current_longtitude), (restaurant_latitude,restaurant_longtitude)).m
-        # 이미지 없을시 설정
-        if restaurant_base.image == None:
-            restaurant_base.image = "None"
-        # NAVER인 놈들이랑 아닌놈들 중에 Likes별 가장 많이 받은것들 이름 뽑아주고 개수 정렬해서 만들어주기
-        # review_likes에서 likes_id별로 정렬하는데 이것의 수가 많은대로 정렬하고, 하나하나씩 몇개있는지 뽑아준다
-        naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')
-        #Counter사용으로 id별로 개수를 세어준다
-        naver_likes_counter = Counter(like.likes.id for like in naver_review_likes)
-        #Counter가 tuple형식이니 x[1] -> 개수별로 내림차순으로 만들어준다
-        sorted_naver_likes = sorted(naver_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
-        naver_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_naver_likes]
-        
-        user_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')
-        user_likes_counter = Counter(like.likes.id for like in user_review_likes)
-        sorted_user_likes = sorted(user_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
-        user_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_user_likes]
+        for naver_user in naver_users:
+            naver_review_count = Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
+            naver_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
+            user_review_count = Review_Restaurant.objects.filter(restaurant = restaurant_base).exclude(review__user=naver_user).count()
+            user_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).count()
+            
+            #restuarant에서 모든 food를 타고 올라가서 category를 출력 해준다
+            base_food = Restaurant_Food.objects.filter(restaurant=restaurant_base)
+            for food_relation in base_food:
+                categories = food_relation.food.category.name
+            
+            
+            restaurant_latitude = restaurant_base.latitude
+            restaurant_longtitude = restaurant_base.longitude
+            
+            # 추후 api받아와서 설정 할 것
+            current_latitude = 0
+            current_longtitude =0
+            #계산
+            distance = geopy.distance.distance((current_latitude,current_longtitude), (restaurant_latitude,restaurant_longtitude)).m
+            # 이미지 없을시 설정
+            if restaurant_base.image == None:
+                restaurant_base.image = "None"
+            # NAVER인 놈들이랑 아닌놈들 중에 Likes별 가장 많이 받은것들 이름 뽑아주고 개수 정렬해서 만들어주기
+            # review_likes에서 likes_id별로 정렬하는데 이것의 수가 많은대로 정렬하고, 하나하나씩 몇개있는지 뽑아준다
+            naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')
+            #Counter사용으로 id별로 개수를 세어준다
+            naver_likes_counter = Counter(like.likes.id for like in naver_review_likes)
+            #Counter가 tuple형식이니 x[1] -> 개수별로 내림차순으로 만들어준다
+            sorted_naver_likes = sorted(naver_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
+            naver_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_naver_likes]
+            
+            user_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')
+            user_likes_counter = Counter(like.likes.id for like in user_review_likes)
+            sorted_user_likes = sorted(user_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
+            user_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_user_likes]
 
-        restaurant_menu = Menu.objects.filter(restaurant=restaurant_base)
-        # __in은 foreign키로 연결되어있을때 역참조를 위한 것
-        menu_detail = Menu_Detail.objects.filter(menu__in=restaurant_menu)
-        menus=[]
-        for detail in menu_detail:
-            menus.append({
-                'name' : detail.name,
-                'price': detail.price,
-                'conetent' : detail.content,
-            })
-        # 이미지 추가 예정
-        
+            restaurant_menu = Menu.objects.filter(restaurant=restaurant_base)
+            # __in은 foreign키로 연결되어있을때 역참조를 위한 것
+            menu_detail = Menu_Detail.objects.filter(menu__in=restaurant_menu)
+            menus=[]
+            for detail in menu_detail:
+                menus.append({
+                    'name' : detail.name,
+                    'price': detail.price,
+                    'conetent' : detail.content,
+                })
+            # 이미지 추가 예정
+            
 
 
         data = {
