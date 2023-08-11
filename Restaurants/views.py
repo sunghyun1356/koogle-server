@@ -3,7 +3,7 @@ import datetime
 import geopy.distance
 from collections import Counter
 
-from django.db.models import Count
+from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 
@@ -56,7 +56,11 @@ class RestaurantsBaseAPIView(APIView):
             naver_users = User.objects.filter(is_staff=True)
         except User.DoesNotExist:
             raise NotFound("User not found")
-        # 수정 필요
+        try:
+            user_users = User.objects.filter(is_staff=False)
+        except User.DoesNotExist:
+            raise NotFound("User not found")
+
         # for문으로 돌리면서 리스트에 담아주고 또 이걸 분류를 해주어야 한다
         restaurant_latitude = restaurant_base.latitude
         restaurant_longtitude = restaurant_base.longitude
@@ -84,32 +88,45 @@ class RestaurantsBaseAPIView(APIView):
         base_food = Restaurant_Food.objects.filter(restaurant=restaurant_base)
         for food_relation in base_food:
             categories = food_relation.food.category.name
-        
+
+
+        naver_review_count_sum = 0
+        user_review_count_sum = 0
+        naver_review_likes_count_sum =0
+        user_review_likes_count_sum =0
+
+        naver_base_user = User.objects.filter(is_staff=True).first()
+
+
         for naver_user in naver_users:
 
-            naver_review_count = Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
-            naver_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
-            user_review_count = Review_Restaurant.objects.filter(restaurant = restaurant_base).exclude(review__user=naver_user).count()
-            user_review_likes_count = Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).count()
+            # naver리뷰수 
+            naver_review_count_sum += Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
+            # 레스토랑의 라이크수 합
+            naver_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
+         
+        naver_reviews = Review.objects.filter(user__is_staff=True, restaurant=restaurant_base)
+        naver_top_likes = Review_Likes.objects.filter(review__in=naver_reviews).values('likes__likes').annotate(like_count=Count('likes')).order_by('-like_count')[:5]
+        
+        naver_likes_data ={}
+        for likes_info in naver_top_likes:
+            likes_name = likes_info['likes__likes']
+            likes_count = likes_info['like_count']
+            naver_likes_data[likes_name] = likes_count
 
-            
-            # NAVER인 놈들이랑 아닌놈들 중에 Likes별 가장 많이 받은것들 이름 뽑아주고 개수 정렬해서 만들어주기
-            # review_likes에서 likes_id별로 정렬하는데 이것의 수가 많은대로 정렬하고, 하나하나씩 몇개있는지 뽑아준다
-            naver_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).order_by('-likes__id')
-            #Counter사용으로 id별로 개수를 세어준다
-            naver_likes_counter = Counter(like.likes.id for like in naver_review_likes)
-            #Counter가 tuple형식이니 x[1] -> 개수별로 내림차순으로 만들어준다
-            sorted_naver_likes = sorted(naver_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
-            naver_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_naver_likes]
-            
-            user_review_likes =Review_Likes.objects.filter(review__restaurant=restaurant_base).exclude(review__user=naver_user).order_by('-likes__id')
-            user_likes_counter = Counter(like.likes.id for like in user_review_likes)
-            sorted_user_likes = sorted(user_likes_counter.items(), key=lambda x: x[1], reverse=True)[:5]  
-            user_likes_data = [{'name': Likes.objects.get(id=like_id).likes, 'count': count} for like_id, count in sorted_user_likes]
+        for user_user in user_users:
+            # user리뷰수 
+            user_review_count_sum += Review_Restaurant.objects.filter(review__user=user_user, restaurant = restaurant_base).count()
+            # user의 라이크수 합
+            user_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=user_user).count()
 
-
-            
-
+        user_reviews = Review.objects.filter(user__is_staff=False, restaurant=restaurant_base)
+        user_top_likes = Review_Likes.objects.filter(review__in=user_reviews).values('likes__likes').annotate(like_count=Count('likes')).order_by('-like_count')[:5]
+        user_likes_data ={}
+        for likes_info in user_top_likes:
+            likes_name = likes_info['likes__likes']
+            likes_count = likes_info['like_count']
+            user_likes_data[likes_name] = likes_count
 
         data = {
             #이미지 파일 넣으면 postman에서 오류떠서 나중에 넣을게욤
@@ -118,8 +135,8 @@ class RestaurantsBaseAPIView(APIView):
             'address' : restaurant_base.address,
             'opening_closing_time' : restaurant_base.open_close_time,
             'reservation' : restaurant_base.reservation,
-            'naver_koogle' : koogle_cal(naver_review_count , naver_review_likes_count),
-            'user_koogle' : koogle_cal(user_review_count , user_review_likes_count),
+            'naver_koogle' : koogle_cal(naver_review_likes_count_sum , naver_review_count_sum),
+            'user_koogle' : koogle_cal(user_review_likes_count_sum, user_review_count_sum),
             'category':categories,
             'distance' : distance,
             'naver_likes_data' : naver_likes_data,
