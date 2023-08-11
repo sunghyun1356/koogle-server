@@ -164,3 +164,6 @@ try:
 except ImportError:
     pass
 
+# Media 관련 설정
+MEDIA_URL = '/media' # 미디어 파일 URL
+MEDIA_ROOT = BASE_DIR / 'media' # 미디어 파일 저장 위치
