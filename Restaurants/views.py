@@ -6,6 +6,7 @@ from collections import Counter
 from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 
 from rest_framework import generics
 from rest_framework import status
@@ -73,16 +74,21 @@ class RestaurantsBaseAPIView(APIView):
             # 이미지 없을시 설정
         if restaurant_base.image == None:
             restaurant_base.image = "None"
+        
         restaurant_menu = Menu.objects.filter(restaurant=restaurant_base)
         # __in은 foreign키로 연결되어있을때 역참조를 위한 것
         menu_detail = Menu_Detail.objects.filter(menu__in=restaurant_menu)
+        paginator = Paginator(menu_detail,6)
+        page_num =1
+        page_obj = paginator.get_page(page_num)
         menus=[]
         for detail in menu_detail:
             menus.append({
                 'name' : detail.name,
                 'price': detail.price,
-                'conetent' : detail.content,
             })
+
+        
         # 이미지 추가 예정
         #restuarant에서 모든 food를 타고 올라가서 category를 출력 해준다
         base_food = Restaurant_Food.objects.filter(restaurant=restaurant_base)
