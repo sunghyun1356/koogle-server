@@ -7,6 +7,8 @@ from django.db.models import Count, Avg
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import timedelta
 
 from rest_framework import generics
 from rest_framework import status
@@ -26,15 +28,23 @@ from .serializers import *
 
 # review 디테일 페이지 기본 -> 최신순으로 배정
 
-# 이름 위치, 거리 필요
-# 총 몇개의 리뷰가 있는지와 대략적으로 몇 쿠글인지
-
+# country별로 뽑아올 때
 class ReviewListInfoCountryAPIView(generics.ListAPIView):
     # 객체저장
     queryset = Review.objects.all()
     # serializer시키기
     serializer_class = ReviewSerializer
     permission_classes = [AllowAny]
+    
+
+    def calculate_time(self, review):
+        current = timezone.now()
+        gap = current - review.created_at
+        days = gap.days
+        seconds = gap.seconds
+        hours, remain = divmod(seconds, 3600)
+        minutes, seconds = divmod(remain, 60)
+        return f"{days} dyas, {hours}hours, {minutes}minutes ago"
 
     def get_queryset(self):
         country_name = self.request.query_params.get('country_name')
@@ -83,26 +93,29 @@ class ReviewListInfoCountryAPIView(generics.ListAPIView):
         return Response(data)
 
     def get_review_data(self, reviews, restaurant_base):
+        
         review_data = []
         for review in reviews:
             user_reviews = Review.objects.filter(user=review.user)
             total_review_count = user_reviews.count()
             total_image_count = sum(1 for r in user_reviews if r.image_1 or r.image_2 or r.image_3)
-            
+
             data = {
                 
                 'username': review.user.username,
                 'star': review.star,
-                'created_at': review.created_at,
                 'total_review_count': total_review_count,
                 'total_image_count': total_image_count,
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
-                
+                'created_at' :  self.calculate_time(review),
             }
             review_data.append(data)
         
         return review_data
+
+              
+            
 
 class ReviewListInfoAPIView(generics.ListAPIView):
     # 객체저장

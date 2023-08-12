@@ -2,6 +2,10 @@ from typing import Any
 from django.db import models
 from Users.models import *
 from Restaurants.models import *
+
+from django.utils import timezone
+from datetime import timedelta
+
 # Create your models here.
 
 class Review(models.Model):
@@ -14,6 +18,16 @@ class Review(models.Model):
     created_at = models.DateTimeField(auto_created=True)
     koogle = models.IntegerField(verbose_name="koogle")
     star = models.IntegerField(verbose_name="star")
+    
+    def calculate_time(self):
+        current = timezone.now()
+        gap = current - self.created_at
+        days = gap.days
+        seconds = gap.seconds
+        hours, remain = divmod(seconds, 3600)
+        minutes, seconds = divmod(remain, 60)
+        return f"{days} dyas, {hours}hours, {minutes}minutes ago"
+    
     def __str__(self):
          return f"Overall review for {self.restaurant.name} written by{self.user.username}"
     
