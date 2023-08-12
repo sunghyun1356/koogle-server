@@ -7,9 +7,9 @@ class Review(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="review_restaurant")
     content = models.TextField(max_length= 1000, verbose_name="content", null=False)
-    image_1 = models.ImageField(upload_to="",null=True)
-    image_2 = models.ImageField(upload_to="",null=True)
-    image_3 = models.ImageField(upload_to="", null=True)
+    image_1 = models.ImageField(upload_to="reviews/review-img",null=True)
+    image_2 = models.ImageField(upload_to="reviews/review-img",null=True)
+    image_3 = models.ImageField(upload_to="reviews/review-img", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     koogle = models.IntegerField(verbose_name="koogle")
     star = models.IntegerField(verbose_name="star")
@@ -34,7 +34,7 @@ class Review_Likes(models.Model):
 
 class Likes_Restaurant(models.Model):
     likes = models.ForeignKey(Likes, on_delete=models.CASCADE)
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey('Restaurants.Restaurant', on_delete=models.CASCADE)
 
     def __str__(self):
         return f'Restaurant {self.restaurant} has a like type "{self.likes}"'

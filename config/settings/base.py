@@ -15,7 +15,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_URL = os.getenv('BASE_URL')
 
 
@@ -26,9 +26,6 @@ BASE_URL = os.getenv('BASE_URL')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
     #추후에 cloudtype추가필요
@@ -165,5 +162,7 @@ except ImportError:
     pass
 
 # Media 관련 설정
-MEDIA_URL = '/media' # 미디어 파일 URL
+MEDIA_URL = '/media/' # 미디어 파일 URL
 MEDIA_ROOT = BASE_DIR / 'media' # 미디어 파일 저장 위치
+
+INTERNAL_IPS = []
