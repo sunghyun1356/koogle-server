@@ -124,6 +124,16 @@ class ReviewListInfoAPIView(generics.ListAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [AllowAny]
     # 정렬하기 위해서 설정해준다
+
+    def calculate_time(self, review):
+        current = timezone.now()
+        gap = current - review.created_at
+        days = gap.days
+        seconds = gap.seconds
+        hours, remain = divmod(seconds, 3600)
+        minutes, seconds = divmod(remain, 60)
+        return f"{days} dyas, {hours}hours, {minutes}minutes ago"
+
     def get_queryset(self):
         # 초반 기본 설정은 latest고 get(a,b)일때 query_param에 get으로 a,b를 가져온다는 것이다
         order_by = self.request.query_params.get('order_by', 'latest') 
@@ -194,7 +204,7 @@ class ReviewListInfoAPIView(generics.ListAPIView):
                 
                 'username': review.user.username,
                 'star': review.star,
-                'created_at': review.created_at,
+                'created_at' :  self.calculate_time(review),
                 'total_review_count': total_review_count,
                 'total_image_count': total_image_count,
                 'content': review.content,
@@ -205,4 +215,4 @@ class ReviewListInfoAPIView(generics.ListAPIView):
         return review_data
     
 class ReviewCreateAPIView(APIView):
-    pass
+    
