@@ -142,7 +142,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
         review = serializer.save()
 
         # Likes 선택 여부를 확인하고 Review_Likes, Likes_Restaurant에 자동으로 저장
-        likes_data = request.data.get('all_likes_data', [1, 0, 1, 0, 1, 0])
+        likes_data = request.data.get('all_likes_list', [])
         i = 0
         for like_id in likes_data:
             # 각각의 likes_Restaurant에서 likes의 pk를 얻는다.
@@ -285,7 +285,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
         review = serializer.save()
 
         # Likes 선택 여부를 확인하고 Review_Likes, Likes_Restaurant에 자동으로 저장
-        likes_data = request.data.get('all_likes_data', [1, 0, 1, 0, 1, 0])
+        likes_data = request.data.get('all_likes_list', [])
         i = 0
         for like_id in likes_data:
             # 각각의 likes_Restaurant에서 likes의 pk를 얻는다.

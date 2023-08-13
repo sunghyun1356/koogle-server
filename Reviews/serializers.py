@@ -4,11 +4,27 @@ from .models import *
 from Users.models import User
 
 
-#리뷰작성하기 + 작성하기
 class ReviewUserBaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields ='__all__'
+        fields = '__all__'
+
+    def create(self, validated_data):
+        all_likes_data = self.context['request'].data.get('all_likes_data', [])
+        
+        # Review 객체 생성
+        review = Review.objects.create(**validated_data)
+
+        for like_id in all_likes_data:
+            if int(like_id) == 1:
+                try:
+                    like = Likes_Restaurant.objects.filter(restaurant=review.restaurant).order_by('pk').first()
+                    Review_Likes.objects.create(review=review, likes=like.likes)
+                except (ValueError, Likes_Restaurant.DoesNotExist, IndexError):
+                    pass
+
+        return review
+
 
 
         
