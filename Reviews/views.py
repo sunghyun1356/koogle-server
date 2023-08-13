@@ -18,6 +18,7 @@ from rest_framework.settings import api_settings
 from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import CreateAPIView
 
 from .models import *
 from Restaurants.models import *
@@ -33,7 +34,7 @@ class ReviewListInfoCountryAPIView(generics.ListAPIView):
     # 객체저장
     queryset = Review.objects.all()
     # serializer시키기
-    serializer_class = ReviewSerializer
+    serializer_class = ReviewUserBaseSerializer
     permission_classes = [AllowAny]
     
 
@@ -121,7 +122,7 @@ class ReviewListInfoAPIView(generics.ListAPIView):
     # 객체저장
     queryset = Review.objects.all()
     # serializer시키기
-    serializer_class = ReviewSerializer
+    serializer_class = ReviewUserBaseSerializer
     permission_classes = [AllowAny]
     # 정렬하기 위해서 설정해준다
 
@@ -214,5 +215,51 @@ class ReviewListInfoAPIView(generics.ListAPIView):
         
         return review_data
     
-class ReviewCreateAPIView(APIView):
-    
+# user정하고, 레스토랑 정하고, 내용넣고, 이미지 넣고, created_at은 자동설정, koogle설정 란은 없고, star는 지정해준다
+# likes들 란이 있으면 그중에서 5개를 선택해서 지정한다. -> review_likes에 저장이 된다.q
+class ReviewCreateListAPIView(generics.GenericAPIView):
+    queryset = Review.objects.all()
+    # serializer시키기
+    serializer_class = ReviewCreateListSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request,restaurant_name, *args, **kwargs):
+        try:
+            restaurant_base = Restaurant.objects.get(name=restaurant_name)
+        except Restaurant.DoesNotExist:
+            raise NotFound("Restaurant not found")
+        all_reviews = Review.objects.filter(restaurant=restaurant_base)
+        all_likes_list =[]
+        for review in all_reviews:
+            likes_list = review.review_review_likes.values_list('likes__likes', flat=True)
+            all_likes_list.extend(likes_list)
+        all_likes_list = list(set(all_likes_list))
+
+        user = review.user
+        content = request.data.get('content')
+        star = request.data.get('star')
+
+        all_likes_list = request.data.get('all_likes_list', [])
+
+        review_data ={
+            'user' : user,
+            'restaurant' : restaurant_base,
+            'content' : content,
+            'star' : star,
+            'created_at' : timezone.now(),
+        }
+        review = Review.objects.create(**review_data)
+        for index, like_value in enumerate(all_likes_list):
+            if like_value ==1:
+                like_name = Likes.objects.get(pk=index + 1).likes
+                like = Likes.objects.get(likes=like_name)
+                Review_Likes.objects.create(review=review, likes=like)
+        
+        serializer = self.get_serializer(data=review_data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+       
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+        

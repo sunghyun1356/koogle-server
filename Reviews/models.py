@@ -5,19 +5,23 @@ from Restaurants.models import *
 
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
 
 # Create your models here.
 
 class Review(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="review_restaurant")
     content = models.TextField(max_length= 1000, verbose_name="content", null=False)
     image_1 = models.ImageField(upload_to="",null=True)
     image_2 = models.ImageField(upload_to="",null=True)
     image_3 = models.ImageField(upload_to="", null=True)
-    created_at = models.DateTimeField(auto_created=True)
-    koogle = models.IntegerField(verbose_name="koogle")
-    star = models.IntegerField(verbose_name="star")
+    created_at = models.DateTimeField(auto_now_add=True)
+    #koogle 값은 처음에 영이였다가 post하면 추후에 저장이 되도록 한다
+    koogle = models.IntegerField(verbose_name="koogle", default=0)
+    star = models.IntegerField(verbose_name="star",default=0)
+    
     
     def calculate_time(self):
         current = timezone.now()
@@ -26,7 +30,7 @@ class Review(models.Model):
         seconds = gap.seconds
         hours, remain = divmod(seconds, 3600)
         minutes, seconds = divmod(remain, 60)
-        return f"{days} dyas, {hours}hours, {minutes}minutes ago"
+        return f"{days} days, {hours}hours, {minutes}minutes ago"
     
     def __str__(self):
          return f"Overall review for {self.restaurant.name} written by{self.user.username}"

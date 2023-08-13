@@ -14,7 +14,8 @@ class ReviewUserBaseSerializer(serializers.ModelSerializer):
         model = Review
         fields ='__all__'
 
-class ReviewSerializer(serializers.ModelSerializer):
+class ReviewCreateListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields ='__all__'
+        fields = ['content', 'star']
+        
