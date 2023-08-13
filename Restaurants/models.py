@@ -20,7 +20,6 @@ class Food(models.Model):
 class Restaurant(models.Model):
     name = models.CharField(max_length=100, verbose_name="restaurant_name", null=False)
     address = models.CharField(max_length=200, verbose_name="restaurant_address", null=False)
-
     image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpeg')
     phone = models.CharField(max_length=20, verbose_name="phone")
     map_link = models.URLField(max_length=200)
@@ -29,13 +28,17 @@ class Restaurant(models.Model):
     koogle_ranking = models.IntegerField(verbose_name="koogle_ranking")
     reservation = models.BooleanField(verbose_name="reservation", default=False)
     reservation_link = models.URLField(verbose_name="reservation_url", null=True, blank=True, unique=True)
-
+    def __str__(self):
+        return self.name   
 
 class OpenHours(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='open_hours')
     day = models.CharField(verbose_name='day of the week', max_length=15) # ex. Mon, Tue, Wed
     open_time = models.TimeField()
     close_time = models.TimeField()
+    
+    def __str__(self):
+        return f'{self.restaurant.name}"s {self.day} open and close time '
 
 class Menu_Detail(models.Model):
     name = models.CharField(max_length=100)

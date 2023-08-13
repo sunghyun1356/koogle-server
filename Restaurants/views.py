@@ -61,6 +61,19 @@ class RestaurantsBaseAPIView(APIView):
             user_users = User.objects.filter(is_staff=False)
         except User.DoesNotExist:
             raise NotFound("User not found")
+        # 오픈시간 클로즈시간 가져오기
+        open_close_data ={}
+        open_close = OpenHours.objects.all()
+        for open_hours in open_close:
+            restaurant_name = open_hours.restaurant.name
+            day =open_hours.day
+            open_time = open_hours.open_time.strftime('%H:%M %p')
+            close_time = open_hours.close_time.strftime('%H:%M %p')
+
+            open_close_data[day] ={
+                'open_time' : open_time,
+                'close_time' : close_time,
+            }
 
         # for문으로 돌리면서 리스트에 담아주고 또 이걸 분류를 해주어야 한다
         restaurant_latitude = restaurant_base.latitude
@@ -101,13 +114,10 @@ class RestaurantsBaseAPIView(APIView):
         naver_review_likes_count_sum =0
         user_review_likes_count_sum =0
 
-        naver_base_user = User.objects.filter(is_staff=True).first()
-
-
         for naver_user in naver_users:
 
             # naver리뷰수 
-            naver_review_count_sum += Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
+            naver_review_count_sum += Review.objects.filter(user=naver_user, restaurant = restaurant_base).count()
             # 레스토랑의 라이크수 합
             naver_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
          
@@ -122,7 +132,7 @@ class RestaurantsBaseAPIView(APIView):
 
         for user_user in user_users:
             # user리뷰수 
-            user_review_count_sum += Review_Restaurant.objects.filter(review__user=user_user, restaurant = restaurant_base).count()
+            user_review_count_sum += Review.objects.filter(user=user_user, restaurant = restaurant_base).count()
             # user의 라이크수 합
             user_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=user_user).count()
 
@@ -139,7 +149,7 @@ class RestaurantsBaseAPIView(APIView):
             'name' : restaurant_base.name,
             'phone' : restaurant_base.phone,
             'address' : restaurant_base.address,
-            'opening_closing_time' : restaurant_base.open_close_time,
+            'opening_closing_time' : open_close_data,
             'reservation' : restaurant_base.reservation,
             'naver_koogle' : koogle_cal(naver_review_likes_count_sum , naver_review_count_sum),
             'user_koogle' : koogle_cal(user_review_likes_count_sum, user_review_count_sum),
