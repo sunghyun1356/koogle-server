@@ -24,3 +24,5 @@ urlpatterns = [
     path('api/restaurants/reviews/', include('Reviews.urls')),
     ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
+if settings.DEBUG == True:
+    urlpatterns += path("__debug__/", include("debug_toolbar.urls")), # django-debug-toolbar requirement

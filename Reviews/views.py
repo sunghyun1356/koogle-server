@@ -23,6 +23,7 @@ from rest_framework.generics import CreateAPIView
 from .models import *
 from Restaurants.models import *
 from .serializers import *
+from Users.models import *
 
 # Create your views here.
 

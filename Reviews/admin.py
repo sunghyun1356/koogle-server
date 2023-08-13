@@ -4,6 +4,6 @@ from .models import *
 admin.site.register(Likes)
 admin.site.register(Review)
 admin.site.register(Review_Likes)
-admin.site.register(Review_Restaurant)
+admin.site.register(Likes_Restaurant)
 
 
