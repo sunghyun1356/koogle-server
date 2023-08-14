@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/restaurants/', include('Restaurants.urls')),
     path('api/restaurants/reviews/', include('Reviews.urls')),
+    path('api/user/', include('Users.urls')),
     ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG == True:
