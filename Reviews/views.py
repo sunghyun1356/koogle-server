@@ -1,11 +1,9 @@
 from django.shortcuts import render
 import datetime
 import geopy.distance
-from collections import Counter
 
-from django.db.models import Count, Avg
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import timedelta

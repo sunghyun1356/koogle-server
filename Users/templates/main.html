@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>메인 페이지</title>
+</head>
+<body>
+    <h1>메인 페이지</h1>
+    {% if user.is_authenticated %}
+        <p>로그인된 사용자: {{ user.username }}</p>
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">로그아웃</button>
+        </form>
+    {% else %}
+        <p>로그인 안 됨</p>
+        <a href="{% url 'login' %}">로그인</a>
+    {% endif %}
+</body>
+</html>

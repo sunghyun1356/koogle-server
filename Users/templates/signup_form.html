@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>회원가입</title>
+</head>
+<body>
+    <h1>회원가입</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="signup-name">이름:</label>
+        <input type="text" id="signup-name" name="name" required><br><br>
+
+        <label for="signup-password">비밀번호:</label>
+        <input type="password" id="signup-password" name="password" required><br><br>
+
+        <label for="signup-country">나라:</label>
+        <select id="signup-country" name="country" required>
+            <option value="" disabled selected>나라 선택</option>
+            <!-- 나라 목록을 드롭다운 옵션으로 추가 -->
+            {% for country in countries %}
+            <option value="{{ country.id }}">{{ country.name }}</option>
+            {% endfor %}
+            <!-- 나라 옵션들을 추가하세요 -->
+        </select><br><br>
+
+        <button type="submit">가입하기</button>
+    </form>
+</body>
+</html>
