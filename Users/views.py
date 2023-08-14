@@ -11,6 +11,8 @@ from .models import User
 from .models import Country
 from django.contrib.sessions.backends.db import SessionStore
 
+# jwt로 된건가?
+
 class CountriesListView(APIView):
     def get(self, request):
         countries = Country.objects.all()

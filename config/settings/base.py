@@ -156,11 +156,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 로컬 세팅 추가
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+
 
 # Media 관련 설정
 MEDIA_URL = '/media/' # 미디어 파일 URL
