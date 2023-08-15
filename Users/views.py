@@ -6,12 +6,14 @@ from django.contrib.auth import authenticate, logout
 from django.conf import settings
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 
 import jwt # PyJWT 설치 해야함
-from .models import User
+# from .models import User
 from .models import Country
 from django.contrib.sessions.backends.db import SessionStore
 
+User = get_user_model()
 
 # jwt로 된건가?
 
@@ -32,14 +34,14 @@ class SignupView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
         country = request.data.get('country')
-        email = request.data.get('email')
+        #email = request.data.get('email')
         hashed_password = make_password(password)
         country_instance = get_object_or_404(Country, name=country)
 
-        user = User.objects.create(username=username, password=hashed_password, email=email, country=country_instance)
+        user = User.objects.create(username=username, password=hashed_password, country=country_instance)
 
-        payload = {'user_id': user.id, 'username': user.username, 'country': country_instance.name} # type: ignore
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        #payload = {'user_id': user.id, 'username': user.username, 'country': country_instance.name} # type: ignore
+        #token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         
         # 회원가입이 완료되었다는 문구, 메인페이지로 가기 버튼 있는 페이지로
         context = {'username': username, 'country': country}
@@ -56,7 +58,7 @@ class LoginView(APIView):
         user = authenticate(request, username=username, password=password)
         print(user)
         if user:
-            payload = {'user_id': user.id, 'username': user.username, 'country': user.country} # type: ignore
+            payload = {'user_id': user.id, 'username': user.username} 
             token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
             return Response({'token': token})
         else:
