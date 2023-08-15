@@ -36,7 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     last_login = models.DateTimeField(auto_now=True)
     objects = UserManager()
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = 'name'
     REQUIRED_FIELDS = []
     def __str__(self):
         return self.name
