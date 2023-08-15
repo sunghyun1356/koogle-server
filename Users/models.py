@@ -9,8 +9,9 @@ class UserManager(BaseUserManager):
         user = self.model(username=username,**extra_fields)
         user.set_password(password)
         user.save(using=self._db)
+
         return user
-    def create_superuser(self, username, country=None, password=None, **extra_fields):
+    def create_superuser(self, username, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -29,7 +30,7 @@ class Country(models.Model):
     
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=255, unique=True, null=False)
-    country = models.ForeignKey(Country,on_delete=models.CASCADE, related_name='user_country',null=False )
+    country = models.ForeignKey(Country,on_delete=models.CASCADE, related_name='user_country',null=True)
     is_staff = models.BooleanField(default=False)
     last_login = models.DateTimeField(auto_now=True)
     objects = UserManager()
