@@ -29,20 +29,20 @@ class SignupView(APIView):
         return render(request, 'signup_form.html', context)
     
     def post(self, request):
-        name = request.data.get('name')
+        username = request.data.get('username')
         password = request.data.get('password')
         country = request.data.get('country')
         email = request.data.get('email')
         hashed_password = make_password(password)
         country_instance = get_object_or_404(Country, name=country)
 
-        user = User.objects.create(name=name, password=hashed_password, email=email, country=country_instance)
+        user = User.objects.create(username=username, password=hashed_password, email=email, country=country_instance)
 
-        payload = {'user_id': user.id, 'name': user.name, 'country': country_instance.name} # type: ignore
+        payload = {'user_id': user.id, 'username': user.username, 'country': country_instance.name} # type: ignore
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         
         # 회원가입이 완료되었다는 문구, 메인페이지로 가기 버튼 있는 페이지로
-        context = {'name': name, 'country': country}
+        context = {'username': username, 'country': country}
         return render(request, 'signup_complete.html', context)
 
 class LoginView(APIView):
@@ -50,13 +50,13 @@ class LoginView(APIView):
         return render(request, 'login.html')
     
     def post(self, request):
-        name = request.data.get('name')
+        username = request.data.get('username')
         password = request.data.get('password')
 
-        user = authenticate(request, name=name, password=password)
+        user = authenticate(request, username=username, password=password)
         print(user)
         if user:
-            payload = {'user_id': user.id, 'name': user.name, 'country': user.country} # type: ignore
+            payload = {'user_id': user.id, 'username': user.username, 'country': user.country} # type: ignore
             token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
             return Response({'token': token})
         else:
