@@ -13,13 +13,20 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+
+import pymysql
+pymysql.install_as_MySQLdb()
+
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_URL = os.getenv('BASE_URL')
 
 
+DEBUG = False
 
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -28,7 +35,7 @@ BASE_URL = os.getenv('BASE_URL')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 ALLOWED_HOSTS = [
-    #추후에 cloudtype추가필요
+    '*'
 ]
 
 
@@ -48,6 +55,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'data_fetcher',
+    'debug_toolbar'
 ]
 
 MIDDLEWARE = [
@@ -59,6 +67,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', ## 이거 추가!!
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+
 ]
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # 기본 인증 백엔드
@@ -99,22 +110,23 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+
+
+# 데이터베이스는 AWS RDS Mysql 사용 했습니다.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+		'NAME': 'tealog',
+        'USER': 'admin',
+        'PASSWORD': 'hackertonkoogle',
+        'HOST': 'tealog-instance-1.catymkthpwcp.ap-northeast-2.rds.amazonaws.com',
+        'PORT': '3306',
+        'OPTIONS':{
+            'init_command' : "SET sql_mode='STRICT_TRANS_TABLES'"
+        }
     }
 }
-#DATABASES = {
-#    'default': {
-#                'ENGINE': 'django.db.backends.mysql',
-#        'NAME': os.getenv('DB_NAME'),
-#        'USER': os.getenv('DB_USER'),
-#        'PASSWORD': os.getenv('DB_PASSWORD'),
-#       'HOST': os.getenv('DB_HOST'),
-#       'PORT': os.getenv('DB_PORT'),
-#   }
-#}
+
 
 
 # Password validation

@@ -1,6 +1,7 @@
 from django.shortcuts import render
 import datetime
 import geopy.distance
+from Papago_API import translate_and_extract
 
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
