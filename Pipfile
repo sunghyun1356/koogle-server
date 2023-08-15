@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
 djangorestframework = "*"
 django-cors-headers = "*"
 django-environ = "*"
@@ -12,6 +11,11 @@ python-dotenv = "*"
 pillow = "*"
 geopy = "*"
 django-debug-toolbar = "*"
+jwt = "*"
+django = {extras = ["gdal"], version = "*"}
+numpy = "*"
+cython = "*"
+pyjwt = "*"
 
 [dev-packages]
 

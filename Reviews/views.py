@@ -108,13 +108,16 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
 
             data = {
                 
-                'username': review.user.username,
+                'username': review.user.name,
                 'star': review.star,
                 'total_review_count': total_review_count,
                 'total_image_count': total_image_count,
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
                 'created_at' :  self.calculate_time(review),
+                'image_1' : review.image_1,
+                'image_2' : review.image_2,
+                'image_3' : review.image_3,
             }
             review_data.append(data)
         
@@ -238,6 +241,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             'user_reviews': user_reviews_data,
             'country_list'  : all_countries,
             'all_likes_list' : all_likes_list,
+
         }
         
         return Response(data)
@@ -251,13 +255,16 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             
             data = {
                 
-                'username': review.user.username,
+                'username': review.user.name,
                 'star': review.star,
                 'created_at' :  self.calculate_time(review),
                 'total_review_count': total_review_count,
                 'total_image_count': total_image_count,
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
+                'image_1' : review.image_1,
+                'image_2' : review.image_2,
+                'image_3' : review.image_3,
             }
             review_data.append(data)
         

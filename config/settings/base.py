@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'Reviews.apps.ReviewsConfig',
     'rest_framework',
     'corsheaders',
-
+    'data_fetcher',
 ]
 
 MIDDLEWARE = [
@@ -60,7 +60,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # 기본 인증 백엔드
+]
 # CORS 허용된 출처
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
