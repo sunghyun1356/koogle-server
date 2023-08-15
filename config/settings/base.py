@@ -9,11 +9,11 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
+from django.core.exceptions import ImproperlyConfigured
 import pymysql
 pymysql.install_as_MySQLdb()
 
@@ -22,8 +22,19 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_URL = os.getenv('BASE_URL')
 
+secret_file = BASE_DIR / 'secret.json'
+with open(secret_file) as file:
+    secrets = json.loads(file.read())
 
-DEBUG = False
+def get_secret(setting, secrect_dict=secrets):
+    try:
+        return secrect_dict[setting]
+    except KeyError:
+        error_msg = f'Set the {setting} environment variable'
+        raise ImproperlyConfigured(error_msg)
+SECRET_KEY = get_secret('SECRET_KEY')
+
+
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
@@ -34,29 +45,31 @@ CORS_ALLOW_CREDENTIALS = True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-ALLOWED_HOSTS = [
-    '*'
-]
 
 
-# Application definition
-
-INSTALLED_APPS = [
+DJANGO_APPS =[
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 애플리케이션
+]
+PROJECT_APPS=[
     'Users.apps.UsersConfig',
     'Restaurants.apps.RestaurantsConfig',
     'Reviews.apps.ReviewsConfig',
+    'data_fetcher',
+]
+THIRD_PARTY_APPS=[
     'rest_framework',
     'corsheaders',
-    'data_fetcher',
-    'debug_toolbar'
+    
+    
 ]
+# Application definition
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -112,20 +125,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
-# 데이터베이스는 AWS RDS Mysql 사용 했습니다.
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-		'NAME': 'tealog',
-        'USER': 'root',
-        'PASSWORD': '1',
-        'HOST': 'svc.sel3.cloudtype.app',
-        'PORT': '30186',
-        'OPTIONS':{
-            'init_command' : "SET sql_mode='STRICT_TRANS_TABLES'"
-        }
-    }
-}
 
 
 
