@@ -99,6 +99,7 @@ class RestaurantsBaseAPIView(APIView):
             menus.append({
                 'name' : detail.name,
                 'price': detail.price,
+                'image': detail.image,
             })
 
         
@@ -159,6 +160,7 @@ class RestaurantsBaseAPIView(APIView):
             'user_likes_data' : user_likes_data,
             'restaurant_map_url' : restaurant_base.map_link,
             'restaurant_menu' : menus,
+            'restaurant_image': restaurant_base.image,
             
         }
         return Response(data)
