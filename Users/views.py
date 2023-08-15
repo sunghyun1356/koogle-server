@@ -4,12 +4,13 @@ from rest_framework import status
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, logout
 from django.conf import settings
-import jwt
 from django.shortcuts import render
 
+import jwt
 from .models import User
 from .models import Country
 from django.contrib.sessions.backends.db import SessionStore
+
 
 # jwt로 된건가?
 

@@ -7,6 +7,9 @@ from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from geopy.distance import great_circle
+from django.contrib.gis.measure import Distance
+
 
 from rest_framework import generics
 from rest_framework import status
@@ -16,7 +19,7 @@ from rest_framework.settings import api_settings
 from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-
+from rest_framework.decorators import api_view
 
 
 from .models import *
@@ -28,6 +31,70 @@ from .serializers import *
 # 현재 내위치가 가게로 부터 몇미터 떨어져 있는지 -> 계산 필요
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
+
+@api_view(['POST'])
+def get_restaurants_by_food(request):
+    selected_items = request.data.get('selected_items', [])
+    sort_by = request.data.get('sort_by')
+
+    if not selected_items:
+        return Response({"error": "No selected items provided"}, status=400)
+
+    user_latitude = request.data.get('latitude')  # 사용자 위치의 위도
+    user_longitude = request.data.get('longitude')  # 사용자 위치의 경도
+
+    restaurants = Restaurant.objects.filter(
+        restaurant_food__food__id__in=selected_items
+    )
+
+    # 거리순 정렬
+    if sort_by == 'distance':
+        restaurants = sorted(
+            restaurants,
+            key=lambda restaurant: distance(
+                (user_latitude, user_longitude),
+                (restaurant.latitude, restaurant.longitude)
+            ).m
+        )
+
+    #거리순 정렬
+    if sort_by == 'distance':
+        restaurants = sorted(
+            restaurants,
+            key=lambda restaurant: great_circle(
+                (restaurant.latitude, restaurant.longitude),
+                (user_latitude, user_longitude)
+            ).meters
+        )
+        # 거리를 계산하여 응답 데이터에 추가
+        serialized_data = []
+        for restaurant in restaurants:
+            distance = great_circle(
+                (restaurant.latitude, restaurant.longitude),
+                (user_latitude, user_longitude)
+            ).meters
+            serialized_data.append({
+                "restaurant_info": RestaurantBaseSerializer(restaurant).data,
+                "distance": distance  # 거리 정보를 추가
+            })
+
+    #평점순 정렬
+    if sort_by == 'rating':
+        restaurants = restaurants.order_by('-koogle_ranking')
+
+    serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
+    return Response(serialized_data)
+
+
+
+def main_page(request):
+    categories = Category.objects.all()
+    return render(request, 'main_page.html', {'categories': categories})
+
+
+
+
+
 
 def koogle_cal(a,b):
     if 0<= (a / b)/5 < 1.5:
@@ -79,7 +146,7 @@ class RestaurantsBaseAPIView(APIView):
         restaurant_latitude = restaurant_base.latitude
         restaurant_longtitude = restaurant_base.longitude
             
-            # 추후 api받아와서 설정 할 것
+        # 추후 api받아와서 설정 할 것
         current_latitude = 0
         current_longtitude =0
             #계산

@@ -108,7 +108,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
 
             data = {
                 
-                'username': review.user.username,
+                'username': review.user.name,
                 'star': review.star,
                 'total_review_count': total_review_count,
                 'total_image_count': total_image_count,
@@ -255,7 +255,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             
             data = {
                 
-                'username': review.user.username,
+                'username': review.user.name,
                 'star': review.star,
                 'created_at' :  self.calculate_time(review),
                 'total_review_count': total_review_count,
