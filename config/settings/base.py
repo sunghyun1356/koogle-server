@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'Reviews.apps.ReviewsConfig',
     'rest_framework',
     'corsheaders',
+    'data_fetcher',
 ]
 
 MIDDLEWARE = [

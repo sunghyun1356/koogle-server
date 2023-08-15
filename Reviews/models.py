@@ -35,6 +35,7 @@ class Review_Likes(models.Model):
 class Likes_Restaurant(models.Model):
     likes = models.ForeignKey(Likes, on_delete=models.CASCADE)
     restaurant = models.ForeignKey('Restaurants.Restaurant', on_delete=models.CASCADE)
+    like_count = models.IntegerField()
 
     def __str__(self):
         return f'Restaurant {self.restaurant} has a like type "{self.likes}"'
