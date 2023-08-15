@@ -15,6 +15,7 @@ jwt = "*"
 django = {extras = ["gdal"], version = "*"}
 numpy = "*"
 cython = "*"
+pyjwt = "*"
 
 [dev-packages]
 

@@ -5,8 +5,9 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, logout
 from django.conf import settings
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 
-import jwt
+import jwt # PyJWT 설치 해야함
 from .models import User
 from .models import Country
 from django.contrib.sessions.backends.db import SessionStore
@@ -31,15 +32,17 @@ class SignupView(APIView):
         name = request.data.get('name')
         password = request.data.get('password')
         country = request.data.get('country')
-
+        email = request.data.get('email')
         hashed_password = make_password(password)
-        user = User.objects.create(name=name, password=hashed_password, country=country)
-        
-        payload = {'user_id': user.id, 'name': user.name, 'country': user.country} # type: ignore
+        country_instance = get_object_or_404(Country, name=country)
+
+        user = User.objects.create(name=name, password=hashed_password, email=email, country=country_instance)
+
+        payload = {'user_id': user.id, 'name': user.name, 'country': country_instance.name} # type: ignore
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
         
         # 회원가입이 완료되었다는 문구, 메인페이지로 가기 버튼 있는 페이지로
-        context = {'name': name}
+        context = {'name': name, 'country': country}
         return render(request, 'signup_complete.html', context)
 
 class LoginView(APIView):
@@ -50,7 +53,8 @@ class LoginView(APIView):
         name = request.data.get('name')
         password = request.data.get('password')
 
-        user = authenticate(request, username=name, password=password)
+        user = authenticate(request, name=name, password=password)
+        print(user)
         if user:
             payload = {'user_id': user.id, 'name': user.name, 'country': user.country} # type: ignore
             token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
