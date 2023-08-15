@@ -82,7 +82,7 @@ class NaverScraper:
         try:
             business_hours = root_query_obj[restaurant_key]['newBusinessHours'][0]['businessHours']
         except (IndexError, TypeError, KeyError): 
-            print(f'Unable to get business hours of {str(place_obj)[:20]}...')
+            print(f'Unable to get business hours of {str(place_obj)[:20]}...\n')
             return None
         
         open_hours = NestedDictConverter.convert_list_by_rules(business_hours, self.open_hours_conversion_rules)
@@ -127,6 +127,7 @@ class NaverScraper:
     ]
 
     def scrape_details(self, place_id):
+        print(f'called: scrape_details({place_id})')
         url = self.detail_url % place_id
         
         response = requests.get(url)
@@ -135,7 +136,7 @@ class NaverScraper:
         page = BeautifulSoup(response.content, 'html.parser')
         script_tags = page.find('body').find_all('script')
         if (len(script_tags) < 3):
-            print('less than three script tags')
+            print('less than three script tags\n')
             return None
         
         content = script_tags[2].string
@@ -166,17 +167,13 @@ class NaverScraper:
         params = self.list_params
         params['query'] = query
 
-        print(f'Before get')
-
         response = requests.get(url, params, timeout=5)
         response.raise_for_status()
 
-        print(f'After get')
-        
         try: 
             place = response.json()['result']['site']['list'][0]
         except (NameError, TypeError) as e:
-            print(f'No search result: query was {query}')
+            print(f'No search result: query was {query}\n')
             return None
         
         res = {}
@@ -187,44 +184,3 @@ class NaverScraper:
                 res[key] = res[key][1:] # drop first letter
             
         return res
-
-    
-        
-
-
-if __name__ == '__main__':
-    # res1 = NaverScraper().search_place('02-542-6268')
-    # place_id = res1['place_id']
-    
-    # for (k, v) in res1.items():
-    #     print(f'{k:<16} {str(v)}')
-    # print('\n')
-
-    restaurants = [
-        {
-            'phone': '02-732-0276'
-        },
-        {
-            'phone': '02-545-9845'
-        }, 
-        {
-            'phone': '02-542-6268'
-        }, 
-    ]
-
-    for place in restaurants:
-        res = NaverScraper().scrape_details(place['phone'])
-
-        for (k, v) in res.items():
-            print(f'{k:<16} {str(v)}')
-
-        import time
-        time.sleep(5)
-
-    
-
-    # res2 = NaverScraper().scrape_details(place_id)
-    # for (k, v) in res2.items():
-    #     print(f'{k:<16} {str(v)}')
-
-    # print('\n')

@@ -62,8 +62,6 @@ class OpenHours(models.Model):
         except TypeError:
             incoming = []
 
-        print('after try-except')
-
         to_add = [] # OpenHour object to add
         to_vanish = [] # OpenHour model instances to remove
         i = 0
@@ -87,18 +85,12 @@ class OpenHours(models.Model):
             to_vanish.append(existing[j])
             j = j + 1
         
-        print('after comparison')
-
         for open_hour in to_vanish:
             open_hour.delete()
-
-        print('after deletion')
 
         for open_hour in to_add:
             cls.objects.get_or_create(restaurant=restaurant_obj, **open_hour)
         
-        print('after addition')
-
 
 class Menu_Detail(models.Model):
     name = models.CharField(max_length=100)
@@ -141,7 +133,7 @@ class Menu(models.Model):
             incoming = []
 
         print(f'incoming: {incoming}')
-        print(f'existing: {existing}')
+        print(f'existing: {existing}\n')
 
         to_add = [] # Menu_Detail objects to add
         to_vanish = [] # Menu_Detail model instances to remove
@@ -179,6 +171,54 @@ class Restaurant_Food(models.Model):
     
     def __str__(self):
         return f'{self.food.name} is in {self.restaurant.name}'
+    
+    @classmethod
+    def compare_foods(cls, lhs, rhs):
+        if getattr(lhs, 'name', None) != getattr(rhs, 'name', None):
+            return 1 if getattr(lhs, 'name', None) < getattr(rhs, 'name', None) else -1
+        return 0
 
+    @classmethod
+    def update_restaurant_foods(cls, restaurant_obj, foods_queryset):
+        print(f'update_restaurant_foods({restaurant_obj}, {foods_queryset})')
+        try: 
+            existing_restaurant_foods = cls.objects.filter(restaurant=restaurant_obj).select_related('food')
+            existing_restaurant_foods = existing_restaurant_foods.order_by('food__name')
+            existing = [f.food for f in existing_restaurant_foods]
+        except cls.DoesNotExist:
+            existing = []
 
+        incoming = foods_queryset.order_by('name')
+        if len(incoming) == 0:
+            return
 
+        print(f'incoming: {incoming}')
+        print(f'existing: {existing}\n')
+
+        to_add = [] # Food model instances to add
+        to_vanish = [] # Food model instances to remove
+        i = 0
+        j = 0
+
+        while (i < len(incoming) and j < len(existing)):
+            cmp = cls.compare_foods(incoming[i], existing[j])
+            if cmp == 0:
+                i = i + 1
+                j = j + 1
+            elif cmp > 0:
+                to_vanish.append(existing[j])
+                j = j + 1
+            else:
+                to_add.append(incoming[i])
+                i = i + 1
+        while (i < len(incoming)):
+            to_add.append(incoming[i])
+            i = i + 1
+        while (j < len(existing)):
+            to_vanish.append(existing[j])
+            j = j + 1
+
+        for food_obj in to_vanish:
+            cls.objects.get(restaurant=restaurant_obj, food=food_obj).delete()
+        for food_obj in to_add:
+            cls.objects.get_or_create(restaurant=restaurant_obj, food=food_obj)

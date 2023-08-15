@@ -2,11 +2,13 @@ import decimal
 import time
 
 from django.core.management.base import BaseCommand
-from Restaurants.models import Menu, OpenHours, Restaurant
+from django.db.models import Q
 
 from data_fetcher.source_scrapers import TasteOfSeoulScraper
 from data_fetcher.naver_scrapers import NaverScraper
 from data_fetcher.utils import NestedDictConverter
+
+from Restaurants.models import Food, Menu, OpenHours, Restaurant, Restaurant_Food
 
 class Command(BaseCommand):
     help = 'Scrape verified restaurants from predefined sources, add Naver Place information and save it to the database'
@@ -109,6 +111,18 @@ class Command(BaseCommand):
         }
     }
 
+    restaurant_food_rules = {
+        'name': {
+            'lookup': ['name'],
+        }, 
+        'description': {
+            'lookup': ['description']
+        },
+        'keywords': {
+            'lookup': ['naver', 'keywords']
+        }
+    }
+
     def handle(self, *args, **options):
         sources = [
             TasteOfSeoulScraper, 
@@ -117,9 +131,6 @@ class Command(BaseCommand):
         restaurants = []
         for src in sources:
             restaurants.extend(src().scrape())
-
-        # # FOR TEST
-        restaurants = restaurants[6:8]
 
         naver_scraper = NaverScraper()
         for place in restaurants:
@@ -146,11 +157,13 @@ class Command(BaseCommand):
                         place['naver'] = {**search_res, **detail_res}
             
             time.sleep(5)
-            
+        
+        print(f'scrape restaurants got {len(restaurants)} restaurants:')
         for place in restaurants:
             for (k, v) in place.items():
                 print(f'{k:<16}{str(v)}')
-            print()
+            print('\n')
+        print('\n')
 
         converted_restaurants = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_model_rules)
         for rst in converted_restaurants:
@@ -166,6 +179,34 @@ class Command(BaseCommand):
             menus = rst['menu_detail']
             Menu.update_restaurant_menus(rst_obj, menus)
 
-            
+        restaurants_food_hints = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_food_rules)
+        for rst in restaurants_food_hints:
+            related_foods = Food.objects.none()
+
+            # 1. food name exact match in keywords
+            if rst['keywords']:
+                rst['keywords'] = [word.replace(' ', '').replace('_', '') for word in rst['keywords']]
+                related_foods = related_foods.union(Food.objects.filter(name__in=rst['keywords']))
+
+            # 2. food name partial match in description
+            if rst['description']:
+                description = rst['description'].replace(' ', '')
+                food_names = Food.objects.values_list('name', flat=True)
+
+                query_conditions = Q()
+                for name in food_names:
+                    if name in description:
+                        query_conditions |= Q(name=name)
+                        print(f'{name} in description')
+                
+                if query_conditions != Q():
+                    related_foods = related_foods.union(Food.objects.filter(query_conditions)) 
+
+            if len(related_foods) == 0:
+                Food.objects.get_or_create(name='기타')
+                related_foods = Food.objects.filter(name='기타')
+            restaurant_obj = Restaurant.objects.get(name=rst['name'])
+
+            Restaurant_Food.update_restaurant_foods(restaurant_obj, related_foods)
 
         self.stdout.write(self.style.SUCCESS('Scraping completed'))
