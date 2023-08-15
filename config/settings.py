@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_URL = os.getenv('BASE_URL')
 
 
-DEBUG = False
+DEBUG = True
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
@@ -117,10 +117,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
 		'NAME': 'tealog',
-        'USER': 'admin',
-        'PASSWORD': 'hackertonkoogle',
-        'HOST': 'tealog-instance-1.catymkthpwcp.ap-northeast-2.rds.amazonaws.com',
-        'PORT': '3306',
+        'USER': 'root',
+        'PASSWORD': '1',
+        'HOST': 'svc.sel3.cloudtype.app',
+        'PORT': '30186',
         'OPTIONS':{
             'init_command' : "SET sql_mode='STRICT_TRANS_TABLES'"
         }
