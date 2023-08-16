@@ -32,8 +32,8 @@ from .serializers import *
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
 
-@api_view(['POST'])
-def get_restaurants_by_food(request):
+@api_view(['GET'])
+def get_restaurants_by_selected_items(request, food_id):
     selected_items = request.data.get('selected_items', [])
     sort_by = request.data.get('sort_by')
 
@@ -45,7 +45,7 @@ def get_restaurants_by_food(request):
 
     restaurants = Restaurant.objects.filter(
         restaurant_food__food__id__in=selected_items
-    )
+    ).distinct()
 
     # 거리순 정렬
     if sort_by == 'distance':
@@ -57,15 +57,6 @@ def get_restaurants_by_food(request):
             ).m
         )
 
-    #거리순 정렬
-    if sort_by == 'distance':
-        restaurants = sorted(
-            restaurants,
-            key=lambda restaurant: great_circle(
-                (restaurant.latitude, restaurant.longitude),
-                (user_latitude, user_longitude)
-            ).meters
-        )
         # 거리를 계산하여 응답 데이터에 추가
         serialized_data = []
         for restaurant in restaurants:
@@ -79,11 +70,9 @@ def get_restaurants_by_food(request):
             })
 
     #평점순 정렬
-    if sort_by == 'rating':
+    elif sort_by == 'rating':
         restaurants = restaurants.order_by('-koogle_ranking')
-
-    serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
-    return Response(serialized_data)
+        serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
 
 
 
@@ -92,7 +81,26 @@ def main_page(request):
     return render(request, 'main_page.html', {'categories': categories})
 
 
+#검색창
+@api_view(['GET'])
+def search_restaurants(request):
+    search_query = request.GET.get('q')  # 검색
+    
+    if search_query:
+        matching_restaurants = Restaurant.objects.filter(name__icontains=search_query)
+        serialized_data = RestaurantBaseSerializer(matching_restaurants, many=True).data
+        return Response(serialized_data)
+    else:
+        return Response([])
+    
 
+
+def restaurant_detail(request, restaurant_id):
+    restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
+    restaurant.visit_count += 1
+    restaurant.save()
+    
+    return render(request, 'restaurant_detail.html', {'restaurant': restaurant})
 
 
 
