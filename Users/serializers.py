@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-
-User = get_user_model
+from .models import *
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -16,12 +15,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'password','country', 'is_staff')
 
     def create(self, validated_data):
-        # User는 password 해싱을 자동으로 처리해서 저장해주도록
-        # User.objects.create_user() 방식으로 객체를 생성함!(다른 객체 생성과 달리)
+        country_name = validated_data.pop('country')  # Extract country_name from validated_data
+        try:
+            country = Country.objects.get(name=country_name)  # Find the Country object with the given name
+        except Country.DoesNotExist:
+            # Handle case where country doesn't exist
+            raise serializers.ValidationError({"country": "Country with the given name does not exist."})
+
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],
-            country = validated_data['country'],
-            is_staff = validated_data['is_staff']
+            country=country,  # Set the country object
+            is_staff=validated_data['is_staff']
         )
         return user

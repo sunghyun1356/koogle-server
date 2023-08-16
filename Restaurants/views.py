@@ -219,7 +219,7 @@ class RestaurantsBaseAPIView(APIView):
             likes_name = likes_info['likes__likes']
             likes_count = likes_info['like_count']
             user_likes_data[likes_name] = likes_count
-
+        
         data = {
             #이미지 파일 넣으면 postman에서 오류떠서 나중에 넣을게욤
             'name' : restaurant_base.name,

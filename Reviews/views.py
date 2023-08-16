@@ -106,7 +106,8 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
             user_reviews = Review.objects.filter(user=review.user)
             total_review_count = user_reviews.count()
             total_image_count = sum(1 for r in user_reviews if r.image_1 or r.image_2 or r.image_3)
-
+            review_likes = Review_Likes.objects.filter(review=review)
+            likes_names = [rl.likes.likes for rl in review_likes]
             data = {
                 
                 'username': review.user.username,
@@ -119,6 +120,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
                 'image_1' : review.image_1,
                 'image_2' : review.image_2,
                 'image_3' : review.image_3,
+                'review_list' :  likes_names
             }
             review_data.append(data)
         
@@ -276,11 +278,11 @@ class ReviewListInfoAPIView(ListCreateAPIView):
         
         # restaurant_name을 기반으로 레스토랑 객체 가져옴
         restaurant_id = Restaurant.objects.get(name=restaurant_name)
-
+        user = request.user
         # user_id는 현재 요청을 보낸 사용자
-        user_id = request.user.id
+        request.data["user"] = user.id
         # request.data.에 user필드를 추가
-        """request.data["user"] = user_id"""
+        
         request.data["restaurant"] = restaurant_id.id
         # serializer로 데이터 검증 및 저장
         # ㅎ해당 요청의 데이터로 초기화된 serializer 객체를 가져온다
