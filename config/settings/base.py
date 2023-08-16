@@ -33,6 +33,7 @@ def get_secret(setting, secret_dict=secrets):
         error_msg = f'Set the {setting} environment variable'
         raise ImproperlyConfigured(error_msg)
 SECRET_KEY = get_secret('SECRET_KEY')
+print(SECRET_KEY)
 
 
 
