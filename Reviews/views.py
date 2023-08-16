@@ -1,7 +1,8 @@
 from django.shortcuts import render
 import datetime
 import geopy.distance
-from Papago_API import translate_and_extract
+import os
+from dotenv import load_dotenv
 
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
@@ -23,6 +24,10 @@ from .models import *
 from Restaurants.models import *
 from .serializers import *
 from Users.models import *
+load_dotenv()
+client_id = os.getenv('client_id')
+client_secret = os.getenv('client_secret')
+from Papago_API import translate_and_extract
 
 # Create your views here.
 
@@ -255,7 +260,8 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             user_reviews = Review.objects.filter(user=review.user)
             total_review_count = user_reviews.count()
             total_image_count = sum(1 for r in user_reviews if r.image_1 or r.image_2 or r.image_3)
-            
+            review_likes = Review_Likes.objects.filter(review=review)
+            likes_names = [rl.likes.likes for rl in review_likes]
             data = {
                 
                 'username': review.user.username,
@@ -268,6 +274,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
                 'image_1' : review.image_1,
                 'image_2' : review.image_2,
                 'image_3' : review.image_3,
+                'likes_list': likes_names,
             }
             review_data.append(data)
         
