@@ -14,7 +14,7 @@ class Review(models.Model):
     koogle = models.IntegerField(verbose_name="koogle", null=True, default=0)
     star = models.IntegerField(verbose_name="star")
     def __str__(self):
-        return f"Overall review for {self.restaurant.name} written by{self.user.name}"
+        return f"Overall review for {self.restaurant.name} written by{self.user.username}"
     
 
 class Likes(models.Model):
@@ -30,7 +30,7 @@ class Review_Likes(models.Model):
     def __str__(self):
         restaurant_name = self.review.restaurant.name if self.review.restaurant else "Unknown Restaurant"
         likes_type = self.likes.likes if self.likes else "Unknown Likes Type"
-        return f"Review: {restaurant_name}'s {likes_type} by {self.review.user.name}"
+        return f"Review: {restaurant_name}'s {likes_type} by {self.review.user.username}"
 
 class Likes_Restaurant(models.Model):
     likes = models.ForeignKey(Likes, on_delete=models.CASCADE)
