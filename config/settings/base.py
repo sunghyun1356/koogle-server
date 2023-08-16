@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import json
 from pathlib import Path
+from datetime import timedelta
 import os
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
@@ -60,6 +61,7 @@ PROJECT_APPS=[
 THIRD_PARTY_APPS=[
     'rest_framework',
     'corsheaders',
+    'rest_framework_simplejwt',
     
     
 ]
@@ -83,6 +85,20 @@ MIDDLEWARE = [
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # 기본 인증 백엔드
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+}
 # CORS 허용된 출처
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
