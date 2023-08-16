@@ -26,9 +26,9 @@ secret_file = BASE_DIR / 'secret.json'
 with open(secret_file) as file:
     secrets = json.loads(file.read())
 
-def get_secret(setting, secrect_dict=secrets):
+def get_secret(setting, secret_dict=secrets):
     try:
-        return secrect_dict[setting]
+        return secret_dict[setting]
     except KeyError:
         error_msg = f'Set the {setting} environment variable'
         raise ImproperlyConfigured(error_msg)
