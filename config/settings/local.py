@@ -10,9 +10,7 @@ DJANGO_APPS + []
 
 PROJECT_APPS + []
 
-THIRD_PARTY_APPS + [
-    'debug_toolbar'
-]
+THIRD_PARTY_APPS + []
 
 INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_PARTY_APPS
 
@@ -24,6 +22,4 @@ DATABASES = {
         }
     }
 
-STATICFILES_DIRS=[
-    BASE_DIR / 'static'
-]
+STATIC_ROOT = BASE_DIR / 'static'
