@@ -56,7 +56,9 @@ class Command(BaseCommand):
             '태국', 
             '멕시칸', 
             '인도', 
-            '해산물'
+            '해산물',
+            '파인다이닝',
+            '기타',
         ]
     }
 
@@ -69,3 +71,5 @@ class Command(BaseCommand):
                 Food.objects.get_or_create(category=category_obj, name=food)
 
         self.stdout.write(self.style.SUCCESS('Categories initialized'))
+
+        return 0

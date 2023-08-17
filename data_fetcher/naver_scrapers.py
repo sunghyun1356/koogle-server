@@ -1,8 +1,18 @@
-import requests
-from bs4 import BeautifulSoup
 import json
 
-from .utils import to_time, to_day_of_week_eng, NestedDictConverter
+from django.utils import timezone
+
+import requests
+from bs4 import BeautifulSoup
+
+from .utils import (request_with_retry, 
+                    to_date, 
+                    to_time, 
+                    to_day_of_week_eng, 
+                    get_at_most_three_photo_urls, 
+                    download_img, 
+                    NestedDictConverter, 
+                    )
 
 class NaverScraper:
     list_params = {
@@ -14,6 +24,7 @@ class NaverScraper:
         'style': 'v5'
     }
     list_url = 'https://m.map.naver.com/search2/searchMore.naver'
+
     list_result_conversion = {
         # 'NAVER KEY': 'OUR KEY'
         'id': 'place_id', 
@@ -82,7 +93,7 @@ class NaverScraper:
         try:
             business_hours = root_query_obj[restaurant_key]['newBusinessHours'][0]['businessHours']
         except (IndexError, TypeError, KeyError): 
-            print(f'Unable to get business hours of {str(place_obj)[:20]}...')
+            print(f'Unable to get business hours')
             return None
         
         open_hours = NestedDictConverter.convert_list_by_rules(business_hours, self.open_hours_conversion_rules)
@@ -127,15 +138,17 @@ class NaverScraper:
     ]
 
     def scrape_details(self, place_id):
+        print(f'called: scrape_details({place_id})')
         url = self.detail_url % place_id
         
-        response = requests.get(url)
-        response.raise_for_status()
+        response = request_with_retry(url, max_retries=3)
+        if response is None:
+            return None
 
         page = BeautifulSoup(response.content, 'html.parser')
         script_tags = page.find('body').find_all('script')
-        if (len(script_tags) < 3):
-            print('less than three script tags')
+        if (len(script_tags) < 3 or script_tags[2].string is None):
+            print('unexpected html structure')
             return None
         
         content = script_tags[2].string
@@ -148,14 +161,12 @@ class NaverScraper:
         place_obj = json.loads(place_obj)
 
         res = {}
-
         for handler in self.detail_result_conversion_handlers:
             place_info = handler(self, place_obj)
-            if not place_info:
+            if place_info is None:
                 continue
-
-            for key, val in place_info.items():
-                res[key] = val
+            
+            res.update(place_info)
 
         return res
 
@@ -166,17 +177,13 @@ class NaverScraper:
         params = self.list_params
         params['query'] = query
 
-        print(f'Before get')
+        response = request_with_retry(url, max_retries=3, params=params, timeout=5)
 
-        response = requests.get(url, params, timeout=5)
-        response.raise_for_status()
-
-        print(f'After get')
-        
         try: 
             place = response.json()['result']['site']['list'][0]
-        except (NameError, TypeError) as e:
-            print(f'No search result: query was {query}')
+        except (AttributeError, requests.exceptions.JSONDecodeError, KeyError, IndexError) as e:
+            print(f'Search failed on query: {query}')
+            print(e)
             return None
         
         res = {}
@@ -187,44 +194,134 @@ class NaverScraper:
                 res[key] = res[key][1:] # drop first letter
             
         return res
-
     
+    review_url = 'https://api.place.naver.com/graphql'
+    review_headers = {
+        "Content-Type": "application/json",
+        "Host": "api.place.naver.com",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/115.0.0.0"
+    }
+
+    def scrape_likes(self, place_id):
+        try: 
+            request_data = {
+                "operationName": "getVisitorReviewStats",
+                "query": "query getVisitorReviewStats($id: String, $businessType: String = \"place\") {visitorReviewStats(input: {businessId: $id, businessType: $businessType}) { analysis { votedKeyword {details {displayName}}}}}",
+                "variables": {
+                    "businessType": "restaurant",
+                    "id": f"{place_id}"
+                }
+            }
+            response = requests.post(self.review_url, headers=self.review_headers, data=json.dumps(request_data), timeout=5)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error occurred while making POST request: {e}")
+            return None
+
+        try: 
+            response_data = response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            print(f'Invalid response: {e}')
+            return None
         
+        try: 
+            likes = response_data['data']['visitorReviewStats']['analysis']['votedKeyword']['details']
+            likes = [obj['displayName'] for obj in likes]
+        except KeyError:
+            print(f'Unexpected response structure')
+            return None
 
-
-if __name__ == '__main__':
-    # res1 = NaverScraper().search_place('02-542-6268')
-    # place_id = res1['place_id']
+        return likes
     
-    # for (k, v) in res1.items():
-    #     print(f'{k:<16} {str(v)}')
-    # print('\n')
+    def scrape_reviews(self, place_id):
+        try: 
+            data = {
+                "operationName": "getVisitorReviewPhotosInVisitorReviewTab",
+                "query": "query getVisitorReviewPhotosInVisitorReviewTab($businessId: String!, $businessType: String, $page: Int, $display: Int) {visitorReviews(input: {businessId: $businessId, businessType: $businessType, page: $page, display: $display, isPhotoUsed: true}) {items {body media { type thumbnail }visited votedKeywords {displayName }} }}",
+                "variables": {
+                    "businessId": f"{place_id}",
+                    "businessType": "restaurant",
+                    "page": 1,
+                    "display": 20
+                }
+            }
+            response = requests.post(self.review_url, headers=self.review_headers, data=json.dumps(data), timeout=5)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error occurred while making POST request: {e}")
+            return None
 
-    restaurants = [
-        {
-            'phone': '02-732-0276'
-        },
-        {
-            'phone': '02-545-9845'
-        }, 
-        {
-            'phone': '02-542-6268'
-        }, 
-    ]
+        try:
+            response_data = response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            print(f'Invalid response: {e}')
+            return None
+        
+        try:
+            reviews = response_data['data']['visitorReviews']['items']
+        except KeyError:
+            print(f'Unexpected response structure')
+            return None
 
-    for place in restaurants:
-        res = NaverScraper().scrape_details(place['phone'])
+        review_conversion_rule = {
+            'content': {
+                'lookup': ['body'],
+            }, 
+            'created_at': {
+                'lookup': ['visited'],
+                'post_apply': [to_date, timezone.make_aware]
+            }, 
+            'likes': {
+                'lookup': ['votedKeywords'],
+                'post_apply': [lambda lst: [obj['displayName'] for obj in lst]]
+            }
+        }
 
-        for (k, v) in res.items():
-            print(f'{k:<16} {str(v)}')
+        media_to_image_urls_rule = {
+            'images': {
+                'lookup': ['media'],
+                'post_apply': [get_at_most_three_photo_urls]
+            },
+        }
 
-        import time
-        time.sleep(5)
+        images_url_to_images_rule = {
+            'image_1': {
+                'lookup': ['images', 0], 
+                'post_apply': [download_img, ]
+            }, 
+            'image_2': {
+                'lookup': ['images', 1], 
+                'post_apply': [download_img, ]
+            }, 
+            'image_3': {
+                'lookup': ['images', 2], 
+                'post_apply': [download_img, ]
+            }, 
+        }
 
-    
+        converted_reviews = NestedDictConverter.convert_list_by_rules(reviews, review_conversion_rule)
+        image_urls = NestedDictConverter.convert_list_by_rules(reviews, media_to_image_urls_rule)
+        images = NestedDictConverter.convert_list_by_rules(image_urls, images_url_to_images_rule)
 
-    # res2 = NaverScraper().scrape_details(place_id)
-    # for (k, v) in res2.items():
-    #     print(f'{k:<16} {str(v)}')
+        for i in range(len(converted_reviews)):
+            converted_reviews[i].update(images[i])
 
-    # print('\n')
+        return converted_reviews
+
+    def scrape_reviews_and_likes(self, place_id):
+        # get list of likes of this place
+        print(f'called: scrape_reviews_and_likes({place_id})')
+
+        likes = self.scrape_likes(place_id)
+        if likes is None:
+            likes = []
+
+        # get list of reviews of this place
+        reviews = self.scrape_reviews(place_id)
+        if reviews is None:
+            reviews = []
+        
+        return None if not (likes or reviews) else {
+            'likes': likes, 
+            'reviews': reviews,
+        }
