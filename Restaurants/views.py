@@ -2,7 +2,8 @@ from django.shortcuts import render
 import datetime
 import geopy.distance
 from collections import Counter
-
+import os
+from dotenv import load_dotenv
 from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -10,6 +11,7 @@ from django.core.paginator import Paginator
 from geopy.distance import great_circle
 from django.contrib.gis.measure import Distance
 
+from Papago_API import translate_and_extract
 
 from rest_framework import generics
 from rest_framework import status
@@ -21,7 +23,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view
 
-
+load_dotenv()
+client_id = "A1myJv4j7i0k0jVxswja" # 개발자센터에서 발급받은 Client ID 값
+client_secret = "_7xoqsu5d0" # 개발자센터에서 발급받은 Client Secret 값
 from .models import *
 from Reviews.models import *
 # Create your views here.
@@ -32,12 +36,24 @@ from .serializers import *
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
 
+def translate_data(data):
+    translated_data = {}
+
+    for key, value in data.items():
+        if isinstance(value, str):  # 문자열인 경우에만 번역 수행
+            translated_text = translate_and_extract(value)
+            translated_data[key] = translated_text if translated_text is not None else value  # 수정된 부분
+        elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
+            translated_data[key] = translate_data(value)
+        else:
+            translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
+
+    return translated_data
+
 @api_view(['GET'])
 def get_restaurants_by_food(request, food_id):
     selected_items = request.query_params.getlist('food_id', [])
     sort_by = request.query_params.get('sort_by')
-    
-
     if not selected_items:
         return Response({"error": "No selected items provided"}, status=400)
 
@@ -45,10 +61,9 @@ def get_restaurants_by_food(request, food_id):
     user_longitude = request.data.get('-123')  # 사용자 위치의 경도
 
     restaurants = Restaurant.objects.filter(
+
         restaurant_food_restaurant__food__id__in=selected_items
     )
-
-
     if sort_by == 'distance':
         # 거리를 계산하여 응답 데이터에 추가
         serialized_data = []
@@ -65,11 +80,9 @@ def get_restaurants_by_food(request, food_id):
             })
 
     #평점순 정렬
-    if sort_by == 'rating':
+    elif sort_by == 'rating':
         restaurants = restaurants.order_by('-koogle_ranking')
-
-    serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
-    return Response(serialized_data)
+        serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
 
 
 
@@ -78,7 +91,26 @@ def main_page(request):
     return render(request, 'main_page.html', {'categories': categories})
 
 
+#검색창
+@api_view(['GET'])
+def search_restaurants(request):
+    search_query = request.GET.get('q')  # 검색
+    
+    if search_query:
+        matching_restaurants = Restaurant.objects.filter(name__icontains=search_query)
+        serialized_data = RestaurantBaseSerializer(matching_restaurants, many=True).data
+        return Response(serialized_data)
+    else:
+        return Response([])
+    
 
+
+def restaurant_detail(request, restaurant_id):
+    restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
+    restaurant.visit_count += 1
+    restaurant.save()
+    
+    return render(request, 'restaurant_detail.html', {'restaurant': restaurant})
 
 
 
@@ -212,9 +244,11 @@ class RestaurantsBaseAPIView(APIView):
             'naver_likes_data' : naver_likes_data,
             'user_likes_data' : user_likes_data,
             'restaurant_map_url' : restaurant_base.map_link,
-            'restaurant_menu' : menus,
-            'restaurant_image': restaurant_base.image,
-            
+            #'restaurant_menu' : menus,
+            #'restaurant_image': restaurant_base.image,
+
         }
-        return Response(data)
+        translated_data = translate_data(data.copy())  # 원본 데이터 복사해서 번역
+
+        return Response(translated_data)
 

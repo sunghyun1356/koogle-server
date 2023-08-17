@@ -1,10 +1,14 @@
 from rest_framework import serializers
 
 from .models import *
-from Users.models import User
+from Users.models import User, Country
 
 
 class ReviewUserBaseSerializer(serializers.ModelSerializer):
+    country = serializers.SlugRelatedField(
+        queryset = Country.objects.all(),
+        slug_field='name'
+    )
     class Meta:
         model = Review
         fields = '__all__'

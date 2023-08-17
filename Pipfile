@@ -16,6 +16,8 @@ django = {extras = ["gdal"], version = "*"}
 numpy = "*"
 cython = "*"
 pyjwt = "*"
+boto3 = "*"
+django-storages = "*"
 
 [dev-packages]
 
