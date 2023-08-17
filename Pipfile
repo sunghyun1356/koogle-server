@@ -18,6 +18,8 @@ cython = "*"
 pyjwt = "*"
 boto3 = "*"
 django-storages = "*"
+requests = "*"
+beautifulsoup4 = "*"
 
 [dev-packages]
 
