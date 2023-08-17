@@ -37,18 +37,18 @@ from .serializers import *
 # 
 
 def translate_data(data):
-        translated_data = {}
+    translated_data = {}
 
-        for key, value in data.items():
-            if isinstance(value, str):  # 문자열인 경우에만 번역 수행
-                translated_text = translate_and_extract(value)
-                translated_data[key] = translated_text if translated_text else value
-            elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
-                translated_data[key] = translate_data(value)
-            else:
-                translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
+    for key, value in data.items():
+        if isinstance(value, str):  # 문자열인 경우에만 번역 수행
+            translated_text = translate_and_extract(value)
+            translated_data[key] = translated_text if translated_text is not None else value  # 수정된 부분
+        elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
+            translated_data[key] = translate_data(value)
+        else:
+            translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
 
-        return translated_data
+    return translated_data
 
 
 

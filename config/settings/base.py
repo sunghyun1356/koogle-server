@@ -63,6 +63,7 @@ THIRD_PARTY_APPS=[
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'storages'
     
     
 ]
@@ -190,3 +191,17 @@ MEDIA_URL = '/media/' # 미디어 파일 URL
 MEDIA_ROOT = BASE_DIR / 'media' # 미디어 파일 저장 위치
 
 INTERNAL_IPS = []
+
+###########################AWS
+AWS_ACCESS_KEY_ID = 'AKIAZMWRHKCCU4DO7H66' # .csv 파일에 있는 내용을 입력 Access key ID
+AWS_SECRET_ACCESS_KEY = 'i6aFFxWWe+1u55mhSXuz5Rb7P1kwmDfpYcBCpMvI' # .csv 파일에 있는 내용을 입력 Secret access key
+AWS_REGION = 'ap-northeast-2'
+
+###S3 Storages
+AWS_STORAGE_BUCKET_NAME = 'sunghyun1356' # 설정한 버킷 이름
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (AWS_STORAGE_BUCKET_NAME,AWS_REGION)
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

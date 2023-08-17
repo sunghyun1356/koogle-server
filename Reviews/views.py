@@ -107,9 +107,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
         all_likes_list = list(set(all_likes_list))
 
         country_reviews = Review.objects.filter(user__in=country_users, restaurant=restaurant_base)
-        country_review_paginator = Paginator(country_reviews, 10)
-        country_review_page = request.query_params.get('country_review_page',1)
-        country_reviews_data = self.get_review_data(country_review_paginator.get_page(country_review_page), restaurant_base)
+        country_reviews_data = self.get_review_data(country_reviews, restaurant_base)
 
         restaurants_info = {
             'restaurant_name': restaurant_base.name,
@@ -122,8 +120,8 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
             'country_list' : all_countries,
             'all_likes_list': all_likes_list,
         }
-        translated_data = translate_data(data.copy())
-        return Response(translated_data)
+
+        return Response(data)
 
     def get_review_data(self, reviews, restaurant_base):
         
@@ -143,7 +141,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
                 'created_at' :  self.calculate_time(review),
-                #'image_1' : review.image_1,
+                'image_1' : review.image_1,
                 #'image_2' : review.image_2,
                 #'image_3' : review.image_3,
                 'review_list' :  likes_names
@@ -247,18 +245,15 @@ class ReviewListInfoAPIView(ListCreateAPIView):
         user_reviews = Review.objects.filter(user__in=user_users, restaurant=restaurant_base)
         
         # naver_reviews가 여러개니까 이걸 대체 몇개씩 볼건지를 정한다 -> 4개찍 naver_reviews가 저장되어있다
-        naver_reviews_paginator = Paginator(naver_reviews, 4)
 
-        user_reviews_paginator = Paginator(user_reviews, 4)
 
         # 네이버와 user사용자의 리뷰페이지 번호를 가져오는데 파라미터가 url에 없으면 기본값은 1
-        naver_reviews_page = request.query_params.get('naver_reviews_page', 1)
-        user_reviews_page = request.query_params.get('user_reviews_page', 1)
+
         
         #self.함수로 지금 선언된 함수를 사용한다
-        naver_reviews_data = self.get_review_data(naver_reviews_paginator.get_page(naver_reviews_page), restaurant_base)
+        naver_reviews_data = self.get_review_data(naver_reviews, restaurant_base)
         # get_page(?_reviews_page로 지금 어느 페이지에 있는지를 가져온다)
-        user_reviews_data = self.get_review_data(user_reviews_paginator.get_page(user_reviews_page), restaurant_base)
+        user_reviews_data = self.get_review_data(user_reviews, restaurant_base)
         restaurants_info = {
             'restaurant_name': restaurant_base.name,
                 'address': restaurant_base.address,
@@ -272,8 +267,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             'all_likes_list' : all_likes_list,
 
         }
-        translated_data = translate_data(data.copy())
-        return Response(translated_data)
+        return Response(data)
 
     def get_review_data(self, reviews, restaurant_base):
         review_data = []

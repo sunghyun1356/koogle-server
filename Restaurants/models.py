@@ -6,14 +6,12 @@ from rest_framework.exceptions import ValidationError
 
 class Category(models.Model):
     name = models.CharField(max_length=100, verbose_name="category_name")
-    image = models.ImageField(upload_to="restaurants/category-img/", default='restaurants/category/default_image.jpg')
     def __str__(self):
         return self.name
     
 class Food(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="food_category")
     name = models.CharField(max_length=100, verbose_name="Food_name")
-    image = models.ImageField(upload_to="restaurants/food-img/", default='restaurants/food/default_image.jpg')
     def __str__(self):
             return self.name
     
