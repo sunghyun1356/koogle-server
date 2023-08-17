@@ -71,3 +71,5 @@ class Command(BaseCommand):
                 Food.objects.get_or_create(category=category_obj, name=food)
 
         self.stdout.write(self.style.SUCCESS('Categories initialized'))
+
+        return 0

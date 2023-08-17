@@ -6,8 +6,9 @@ from django.db.models import Q
 
 from data_fetcher.source_scrapers import TasteOfSeoulScraper
 from data_fetcher.naver_scrapers import NaverScraper
-from data_fetcher.utils import NestedDictConverter
+from data_fetcher.utils import NestedDictConverter, download_img
 
+from Reviews.models import Likes_Restaurant, Review, Review_Likes
 from Restaurants.models import Food, Menu, OpenHours, Restaurant, Restaurant_Food
 
 class Command(BaseCommand):
@@ -18,25 +19,6 @@ class Command(BaseCommand):
         if not place_id:
             return ''
         return NaverScraper.detail_url % place_id
-    
-    # TODO: image_url의 이미지를 다운받고 경로를 menu['image']에 저장
-    @staticmethod
-    def get_menu_images_from_img_url(menus):
-        print(f'Menus: {menus}')
-
-        if not menus: 
-            return None
-
-        for menu in menus:
-            if 'image_url' in menu:
-                del menu['image_url']
-            menu['image'] = None
-
-        return menus
-    
-    # TODO: image_url의 이미지를 다운받고 경로를 저장
-    def get_image_from_url(img_url):
-        return None
     
     @staticmethod
     def rename_description(menus):
@@ -64,6 +46,20 @@ class Command(BaseCommand):
                     menu['price'] = None
         
         return menus
+    
+    @staticmethod
+    def download_menu_images(menus):
+        if not menus: 
+            return None
+
+        for menu in menus:
+            url = menu.get('image_url', None)
+            image = download_img(url)
+            if image: 
+                menu['image'] = image
+            del menu['image_url']
+
+        return menus
 
     restaurant_model_rules = {
         'name': {
@@ -73,10 +69,8 @@ class Command(BaseCommand):
             'lookup': ['naver', 'address'],
         },
         'image': {
-            # TODO: URL의 이미지 다운로드하고 로컬에 저장, DB에 경로 주기
-            # TODO: 소스 이미지 URL을 우선시, 네이버 이미지 URL로 가도록 만들기
             'lookup': ['image_url'],
-            'post_apply': [get_image_from_url]
+            'post_apply': [download_img]
         }, 
         'phone': {
             'lookup': ['phone'],
@@ -99,12 +93,9 @@ class Command(BaseCommand):
     }
 
     restaurant_related_rules = {
-        'name': {
-            'lookup': ['name'],
-        }, 
-        'menu_detail': {
+        'menu': {
             'lookup': ['naver', 'menu'],
-            'post_apply': [get_menu_images_from_img_url, rename_description, price_to_decimal]
+            'post_apply': [download_menu_images, rename_description, price_to_decimal]
         },
         'open_hours': {
             'lookup': ['naver', 'open_hours'],
@@ -112,9 +103,6 @@ class Command(BaseCommand):
     }
 
     restaurant_food_rules = {
-        'name': {
-            'lookup': ['name'],
-        }, 
         'description': {
             'lookup': ['description']
         },
@@ -123,90 +111,135 @@ class Command(BaseCommand):
         }
     }
 
-    def handle(self, *args, **options):
-        sources = [
-            TasteOfSeoulScraper, 
-        ]
-
-        restaurants = []
-        for src in sources:
-            restaurants.extend(src().scrape())
+    def exclude_duplicate_restaurants(self, restaurants):
+        unique_restaurants = []
+        seen_names = set()
+        for restaurant in restaurants:
+            if restaurant["name"] not in seen_names:
+                unique_restaurants.append(restaurant)
+                seen_names.add(restaurant["name"])
+        
+        return unique_restaurants
+    
+    def scrape_restaurants(self, restaurants):
+        restaurants = self.exclude_duplicate_restaurants(restaurants)
+        self.stdout.write(self.style.NOTICE(f'Got {len(restaurants)} restaurants from source'))
 
         naver_scraper = NaverScraper()
-        for place in restaurants:
-            if place.get('phone', None):
-                query = place['phone']
+        for restaurant in restaurants:
+            queries = []
+            if restaurant.get('phone', False):
+                queries.append(restaurant['phone'])
+            if restaurant.get('name', False):
+                queries.append(restaurant['name'])
 
-                # TODO: handle exceptions by requests.get()
+            for query in queries:
+                # get general info on restaurant -> restaurant['naver']
                 search_res = naver_scraper.search_place(query)
-                if search_res:
-                    place['naver'] = search_res
-                    detail_res = naver_scraper.scrape_details(search_res['place_id'])
-                    if detail_res:
-                        place['naver'] = {**search_res, **detail_res}
-            
-            elif place.get('name', None):
-                query = place['name']
+                if search_res is None:
+                    time.sleep(5)
+                    continue
+                
+                restaurant['naver'] = search_res
+                place_id = search_res['place_id']
 
-                # TODO: handle exceptions by requests.get()
-                search_res = naver_scraper.search_place(query)
-                if search_res:
-                    place['naver'] = search_res
-                    detail_res = naver_scraper.scrape_details(search_res['place_id'])
-                    if detail_res:
-                        place['naver'] = {**search_res, **detail_res}
-            
-            time.sleep(5)
+                # get detailed info on restaurant -> restaurant['naver']
+                details = naver_scraper.scrape_details(place_id)
+                if details is None: 
+                    time.sleep(5)
+                    continue
+
+                restaurant['naver'].update(details)
+
+                # get reviews, likes info on restaurant -> restaurant['naver']
+                reviews_likes = naver_scraper.scrape_reviews_and_likes(place_id)
+                if reviews_likes is None:
+                    time.sleep(5)
+                    continue
+                    
+                restaurant['naver'].update(reviews_likes)
+                
+                # wait 5 seconds - shorter time makes naver mad
+                time.sleep(5)
         
-        print(f'scrape restaurants got {len(restaurants)} restaurants:')
-        for place in restaurants:
-            for (k, v) in place.items():
-                print(f'{k:<16}{str(v)}')
-            print('\n')
-        print('\n')
+        restaurant_instances = []
 
-        converted_restaurants = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_model_rules)
-        for rst in converted_restaurants:
-            rst_obj, _ = Restaurant.objects.update_or_create(name=rst['name'], defaults=rst)
+        self.stdout.write(self.style.NOTICE(f'Add restaurants to database'))
+        restaurant_dicts = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_model_rules)
+        for rst in restaurant_dicts:
+            print(f'{rst}')
 
-        restaurants_related_info = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_related_rules)
-        for rst in restaurants_related_info:
-            rst_obj = Restaurant.objects.get(name=rst['name'])
+            restaurant, _ = Restaurant.objects.update_or_create(name=rst['name'], defaults=rst)
 
-            open_hours = rst['open_hours']
-            OpenHours.update_restaurant_open_hours(rst_obj, open_hours)
+            restaurant_instances.append(restaurant)
 
-            menus = rst['menu_detail']
-            Menu.update_restaurant_menus(rst_obj, menus)
+        self.stdout.write(self.style.NOTICE(f'Add open hours, menus of restaurants to database'))
 
-        restaurants_food_hints = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_food_rules)
-        for rst in restaurants_food_hints:
+        details_restaurant = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_related_rules)
+        for i in range(len(restaurant_instances)):
+            open_hours = details_restaurant[i].get('open_hours', [])
+            OpenHours.update_restaurant_open_hours(restaurant_instances[i], open_hours)
+
+            menus = details_restaurant[i].get('menu', [])
+            Menu.update_restaurant_menus(restaurant_instances[i], menus)
+        
+        self.stdout.write(self.style.NOTICE(f'Relate Food with restaurant'))
+        food_hints_restaurant = NestedDictConverter.convert_list_by_rules(restaurants, self.restaurant_food_rules)
+        for i in range(len(restaurant_instances)):
             related_foods = Food.objects.none()
 
-            # 1. food name exact match in keywords
-            if rst['keywords']:
-                rst['keywords'] = [word.replace(' ', '').replace('_', '') for word in rst['keywords']]
-                related_foods = related_foods.union(Food.objects.filter(name__in=rst['keywords']))
-
-            # 2. food name partial match in description
-            if rst['description']:
-                description = rst['description'].replace(' ', '')
+            # 1. keyword에서 Food가 발견되면 연결
+            keywords = food_hints_restaurant[i].get('keywords', None)
+            if keywords:
+                keywords = [word.replace(' ', '').replace('_', '') for word in keywords]
+                related_foods = related_foods.union(Food.objects.filter(name__in=keywords))
+            
+            # 2. description에서 Food가 발견되면 연결
+            description = food_hints_restaurant[i].get('description', None)
+            if description:
+                description = description.replace(' ', '')
                 food_names = Food.objects.values_list('name', flat=True)
 
                 query_conditions = Q()
                 for name in food_names:
                     if name in description:
                         query_conditions |= Q(name=name)
-                        print(f'{name} in description')
                 
                 if query_conditions != Q():
-                    related_foods = related_foods.union(Food.objects.filter(query_conditions)) 
+                    related_foods = related_foods.union(Food.objects.filter(query_conditions))
+            
+            Restaurant_Food.update_restaurant_foods(restaurant_instances[i], related_foods)
 
-            if len(related_foods) == 0:
-                Food.objects.get_or_create(name='기타')
-                related_foods = Food.objects.filter(name='기타')
-            restaurant_obj = Restaurant.objects.get(name=rst['name'])
+        self.stdout.write(self.style.NOTICE(f'Add likes, reviews on restaurant'))
+        for i in range(len(restaurant_instances)):
+            rst_obj = restaurant_instances[i]
 
-            Restaurant_Food.update_restaurant_foods(restaurant_obj, related_foods)
+            likes = restaurants[i]['naver']['likes']
+            reviews = restaurants[i]['naver']['reviews']
+
+            reviews_without_likes = [{k: v for k, v in rvw.items() if k != 'likes'} for rvw in reviews]
+            review_with_likes_only = [{k: v for k, v in rvw.items() if k == 'likes'} for rvw in reviews]
+
+            Likes_Restaurant.update_restaurant_likes(rst_obj, likes)
+            review_instances = Review.update_restaurant_reviews(rst_obj, reviews_without_likes)
+
+            for j in range(len(review_instances)):
+                Review_Likes.update_review_likes(review_instances[j], review_with_likes_only[j]['likes'])
+
+    def handle(self, *args, **options):
+        sources = [
+            TasteOfSeoulScraper, 
+        ]
+
+        all_restaurants = []
+        for src in sources:
+            all_restaurants.extend(src().scrape())
+
+        # Scrape three restaurants at a time - may have memory issue due to all image files being loaded at once
+        for i in range(0, len(all_restaurants), 3):
+            restaurants = all_restaurants[i:i+3]
+            self.scrape_restaurants(restaurants)
 
         self.stdout.write(self.style.SUCCESS('Scraping completed'))
+
+        return 0
