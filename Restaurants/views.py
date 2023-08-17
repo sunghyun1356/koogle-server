@@ -2,7 +2,8 @@ from django.shortcuts import render
 import datetime
 import geopy.distance
 from collections import Counter
-
+import os
+from dotenv import load_dotenv
 from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -10,6 +11,7 @@ from django.core.paginator import Paginator
 from geopy.distance import great_circle
 from django.contrib.gis.measure import Distance
 
+from Papago_API import translate_and_extract
 
 from rest_framework import generics
 from rest_framework import status
@@ -21,7 +23,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view
 
-
+load_dotenv()
+client_id = os.getenv('client_id')
+client_secret = os.getenv('client_secret')
 from .models import *
 from Reviews.models import *
 # Create your views here.
@@ -31,6 +35,22 @@ from .serializers import *
 # 현재 내위치가 가게로 부터 몇미터 떨어져 있는지 -> 계산 필요
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
+
+def translate_data(data):
+        translated_data = {}
+
+        for key, value in data.items():
+            if isinstance(value, str):  # 문자열인 경우에만 번역 수행
+                translated_text = translate_and_extract(value)
+                translated_data[key] = translated_text if translated_text else value
+            elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
+                translated_data[key] = translate_data(value)
+            else:
+                translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
+
+        return translated_data
+
+
 
 @api_view(['GET'])
 def get_restaurants_by_selected_items(request, food_id):
@@ -219,7 +239,7 @@ class RestaurantsBaseAPIView(APIView):
             likes_name = likes_info['likes__likes']
             likes_count = likes_info['like_count']
             user_likes_data[likes_name] = likes_count
-        
+
         data = {
             #이미지 파일 넣으면 postman에서 오류떠서 나중에 넣을게욤
             'name' : restaurant_base.name,
@@ -234,9 +254,11 @@ class RestaurantsBaseAPIView(APIView):
             'naver_likes_data' : naver_likes_data,
             'user_likes_data' : user_likes_data,
             'restaurant_map_url' : restaurant_base.map_link,
-            'restaurant_menu' : menus,
-            'restaurant_image': restaurant_base.image,
-            
+            #'restaurant_menu' : menus,
+            #'restaurant_image': restaurant_base.image,
+
         }
-        return Response(data)
+        translated_data = translate_data(data.copy())  # 원본 데이터 복사해서 번역
+
+        return Response(translated_data)
 

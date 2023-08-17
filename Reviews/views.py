@@ -3,7 +3,14 @@ import datetime
 import geopy.distance
 import os
 from dotenv import load_dotenv
+import os
+import urllib.parse
+import urllib.request
 
+
+load_dotenv()
+client_id = os.getenv('client_id')
+client_secret = os.getenv('client_secret')
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
@@ -30,7 +37,19 @@ client_secret = os.getenv('client_secret')
 from Papago_API import translate_and_extract
 
 # Create your views here.
+def translate_data(data):
+        translated_data = {}
 
+        for key, value in data.items():
+            if isinstance(value, str):  # 문자열인 경우에만 번역 수행
+                translated_text = translate_and_extract(value)
+                translated_data[key] = translated_text if translated_text else value
+            elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
+                translated_data[key] = translate_data(value)
+            else:
+                translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
+
+        return translated_data
 
 # review 디테일 페이지 기본 -> 최신순으로 배정
 
@@ -42,6 +61,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
     serializer_class = ReviewUserBaseSerializer
     permission_classes = [AllowAny]
     
+
 
     def calculate_time(self, review):
         current = timezone.now()
@@ -56,6 +76,7 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
         country_name = self.request.query_params.get('country_name')
         return country_name
 
+       
     def list(self, request, restaurant_name,country_name, *args, **kwargs):
         data = dict()
         # 레스토랑 베이스 만들기
@@ -101,8 +122,8 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
             'country_list' : all_countries,
             'all_likes_list': all_likes_list,
         }
-        
-        return Response(data)
+        translated_data = translate_data(data.copy())
+        return Response(translated_data)
 
     def get_review_data(self, reviews, restaurant_base):
         
@@ -122,9 +143,9 @@ class ReviewListInfoCountryAPIView(ListCreateAPIView):
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
                 'created_at' :  self.calculate_time(review),
-                'image_1' : review.image_1,
-                'image_2' : review.image_2,
-                'image_3' : review.image_3,
+                #'image_1' : review.image_1,
+                #'image_2' : review.image_2,
+                #'image_3' : review.image_3,
                 'review_list' :  likes_names
             }
             review_data.append(data)
@@ -251,8 +272,8 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             'all_likes_list' : all_likes_list,
 
         }
-        
-        return Response(data)
+        translated_data = translate_data(data.copy())
+        return Response(translated_data)
 
     def get_review_data(self, reviews, restaurant_base):
         review_data = []
@@ -271,11 +292,12 @@ class ReviewListInfoAPIView(ListCreateAPIView):
                 'total_image_count': total_image_count,
                 'content': review.content,
                 'country': review.user.country.name if review.user.country else None,
-                'image_1' : review.image_1,
-                'image_2' : review.image_2,
-                'image_3' : review.image_3,
+                #'image_1' : review.image_1,
+                #'image_2' : review.image_2,
+                #'image_3' : review.image_3,
                 'likes_list': likes_names,
             }
+
             review_data.append(data)
         
         return review_data
