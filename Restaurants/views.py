@@ -57,8 +57,8 @@ def get_restaurants_by_food(request, food_id):
     if not selected_items:
         return Response({"error": "No selected items provided"}, status=400)
 
-    user_latitude = request.data.get('32')  # 사용자 위치의 위도
-    user_longitude = request.data.get('-123')  # 사용자 위치의 경도
+    user_latitude = request.data.get('37.5508')  # 사용자 위치의 위도
+    user_longitude = request.data.get('126.9255')  # 사용자 위치의 경도
 
     restaurants = Restaurant.objects.filter(
 
