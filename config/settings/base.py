@@ -9,14 +9,30 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import json
 from pathlib import Path
+from datetime import timedelta
 import os
 from dotenv import load_dotenv
-load_dotenv()
+from django.core.exceptions import ImproperlyConfigured
+import pymysql
+pymysql.install_as_MySQLdb()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_URL = os.getenv('BASE_URL')
+
+secret_file = BASE_DIR / 'secret.json'
+with open(secret_file) as file:
+    secrets = json.loads(file.read())
+
+def get_secret(setting, secret_dict=secrets):
+    try:
+        return secret_dict[setting]
+    except KeyError:
+        error_msg = f'Set the {setting} environment variable'
+        raise ImproperlyConfigured(error_msg)
+SECRET_KEY = get_secret('SECRET_KEY')
 
 
 
@@ -25,30 +41,35 @@ BASE_URL = os.getenv('BASE_URL')
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
-
-ALLOWED_HOSTS = [
-    #추후에 cloudtype추가필요
-]
 
 
-# Application definition
 
-INSTALLED_APPS = [
+
+DJANGO_APPS =[
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 애플리케이션
+]
+PROJECT_APPS=[
     'Users.apps.UsersConfig',
     'Restaurants.apps.RestaurantsConfig',
     'Reviews.apps.ReviewsConfig',
-    'rest_framework',
-    'corsheaders',
     'data_fetcher',
 ]
+THIRD_PARTY_APPS=[
+    'rest_framework',
+    'corsheaders',
+    'rest_framework_simplejwt',
+    'storages'
+    
+    
+]
+# Application definition
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -59,8 +80,27 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', ## 이거 추가!!
+    #"debug_toolbar.middleware.DebugToolbarMiddleware",
+
+]
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # 기본 인증 백엔드
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=7),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+}
 # CORS 허용된 출처
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -97,27 +137,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-#DATABASES = {
-#    'default': {
-#                'ENGINE': 'django.db.backends.mysql',
-#        'NAME': os.getenv('DB_NAME'),
-#        'USER': os.getenv('DB_USER'),
-#        'PASSWORD': os.getenv('DB_PASSWORD'),
-#       'HOST': os.getenv('DB_HOST'),
-#       'PORT': os.getenv('DB_PORT'),
-#   }
-#}
+
+
+
 
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_USER_MODEL = 'Users.user'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -156,14 +184,24 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 로컬 세팅 추가
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+
 
 # Media 관련 설정
 MEDIA_URL = '/media/' # 미디어 파일 URL
 MEDIA_ROOT = BASE_DIR / 'media' # 미디어 파일 저장 위치
 
 INTERNAL_IPS = []
+
+###########################AWS
+AWS_ACCESS_KEY_ID = 'AKIAZMWRHKCCU4DO7H66' # .csv 파일에 있는 내용을 입력 Access key ID
+AWS_SECRET_ACCESS_KEY = 'i6aFFxWWe+1u55mhSXuz5Rb7P1kwmDfpYcBCpMvI' # .csv 파일에 있는 내용을 입력 Secret access key
+AWS_REGION = 'ap-northeast-2'
+
+###S3 Storages
+AWS_STORAGE_BUCKET_NAME = 'sunghyun1356' # 설정한 버킷 이름
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (AWS_STORAGE_BUCKET_NAME,AWS_REGION)
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

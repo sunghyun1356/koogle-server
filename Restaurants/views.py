@@ -2,11 +2,16 @@ from django.shortcuts import render
 import datetime
 import geopy.distance
 from collections import Counter
-
+import os
+from dotenv import load_dotenv
 from django.db.models import Count,F
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from geopy.distance import great_circle
+from django.contrib.gis.measure import Distance
+
+from Papago_API import translate_and_extract
 
 from rest_framework import generics
 from rest_framework import status
@@ -16,9 +21,11 @@ from rest_framework.settings import api_settings
 from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import api_view
 
-
-
+load_dotenv()
+client_id = "A1myJv4j7i0k0jVxswja" # 개발자센터에서 발급받은 Client ID 값
+client_secret = "_7xoqsu5d0" # 개발자센터에서 발급받은 Client Secret 값
 from .models import *
 from Reviews.models import *
 # Create your views here.
@@ -28,6 +35,84 @@ from .serializers import *
 # 현재 내위치가 가게로 부터 몇미터 떨어져 있는지 -> 계산 필요
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
+
+def translate_data(data):
+    translated_data = {}
+
+    for key, value in data.items():
+        if isinstance(value, str):  # 문자열인 경우에만 번역 수행
+            translated_text = translate_and_extract(value)
+            translated_data[key] = translated_text if translated_text is not None else value  # 수정된 부분
+        elif isinstance(value, dict):  # 중첩된 딕셔너리인 경우 재귀적으로 번역 수행
+            translated_data[key] = translate_data(value)
+        else:
+            translated_data[key] = value  # 문자열이 아닌 경우 그대로 유지
+
+    return translated_data
+
+@api_view(['GET'])
+def get_restaurants_by_food(request, food_id):
+    selected_items = request.query_params.getlist('food_id', [])
+    sort_by = request.query_params.get('sort_by')
+    if not selected_items:
+        return Response({"error": "No selected items provided"}, status=400)
+
+    user_latitude = request.data.get('32')  # 사용자 위치의 위도
+    user_longitude = request.data.get('-123')  # 사용자 위치의 경도
+
+    restaurants = Restaurant.objects.filter(
+
+        restaurant_food_restaurant__food__id__in=selected_items
+    )
+    if sort_by == 'distance':
+        # 거리를 계산하여 응답 데이터에 추가
+        serialized_data = []
+        for restaurant in restaurants:
+            restaurant_latitude = restaurant.latitude
+            restaurant_longitude = restaurant.longitude
+            distance = great_circle(
+                (restaurant_latitude, restaurant_longitude),
+                (user_latitude, user_longitude)
+            ).meters
+            serialized_data.append({
+                "restaurant_info": RestaurantBaseSerializer(restaurant).data,
+                "distance": distance  
+            })
+
+    #평점순 정렬
+    elif sort_by == 'rating':
+        restaurants = restaurants.order_by('-koogle_ranking')
+        serialized_data = RestaurantBaseSerializer(restaurants, many=True).data
+
+
+
+def main_page(request):
+    categories = Category.objects.all()
+    return render(request, 'main_page.html', {'categories': categories})
+
+
+#검색창
+@api_view(['GET'])
+def search_restaurants(request):
+    search_query = request.GET.get('q')  # 검색
+    
+    if search_query:
+        matching_restaurants = Restaurant.objects.filter(name__icontains=search_query)
+        serialized_data = RestaurantBaseSerializer(matching_restaurants, many=True).data
+        return Response(serialized_data)
+    else:
+        return Response([])
+    
+
+
+def restaurant_detail(request, restaurant_id):
+    restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
+    restaurant.visit_count += 1
+    restaurant.save()
+    
+    return render(request, 'restaurant_detail.html', {'restaurant': restaurant})
+
+
 
 def koogle_cal(a,b):
     if 0<= (a / b)/5 < 1.5:
@@ -61,12 +146,25 @@ class RestaurantsBaseAPIView(APIView):
             user_users = User.objects.filter(is_staff=False)
         except User.DoesNotExist:
             raise NotFound("User not found")
+        # 오픈시간 클로즈시간 가져오기
+        open_close_data ={}
+        open_close = OpenHours.objects.all()
+        for open_hours in open_close:
+            restaurant_name = open_hours.restaurant.name
+            day =open_hours.day
+            open_time = open_hours.open_time.strftime('%H:%M %p')
+            close_time = open_hours.close_time.strftime('%H:%M %p')
+
+            open_close_data[day] ={
+                'open_time' : open_time,
+                'close_time' : close_time,
+            }
 
         # for문으로 돌리면서 리스트에 담아주고 또 이걸 분류를 해주어야 한다
         restaurant_latitude = restaurant_base.latitude
         restaurant_longtitude = restaurant_base.longitude
             
-            # 추후 api받아와서 설정 할 것
+        # 추후 api받아와서 설정 할 것
         current_latitude = 0
         current_longtitude =0
             #계산
@@ -86,6 +184,7 @@ class RestaurantsBaseAPIView(APIView):
             menus.append({
                 'name' : detail.name,
                 'price': detail.price,
+                'image': detail.image,
             })
 
         
@@ -101,13 +200,10 @@ class RestaurantsBaseAPIView(APIView):
         naver_review_likes_count_sum =0
         user_review_likes_count_sum =0
 
-        naver_base_user = User.objects.filter(is_staff=True).first()
-
-
         for naver_user in naver_users:
 
             # naver리뷰수 
-            naver_review_count_sum += Review_Restaurant.objects.filter(review__user=naver_user, restaurant = restaurant_base).count()
+            naver_review_count_sum += Review.objects.filter(user=naver_user, restaurant = restaurant_base).count()
             # 레스토랑의 라이크수 합
             naver_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=naver_user).count()
          
@@ -122,7 +218,7 @@ class RestaurantsBaseAPIView(APIView):
 
         for user_user in user_users:
             # user리뷰수 
-            user_review_count_sum += Review_Restaurant.objects.filter(review__user=user_user, restaurant = restaurant_base).count()
+            user_review_count_sum += Review.objects.filter(user=user_user, restaurant = restaurant_base).count()
             # user의 라이크수 합
             user_review_likes_count_sum  += Review_Likes.objects.filter(review__restaurant=restaurant_base, review__user=user_user).count()
 
@@ -139,7 +235,7 @@ class RestaurantsBaseAPIView(APIView):
             'name' : restaurant_base.name,
             'phone' : restaurant_base.phone,
             'address' : restaurant_base.address,
-            'opening_closing_time' : restaurant_base.open_close_time,
+            'opening_closing_time' : open_close_data,
             'reservation' : restaurant_base.reservation,
             'naver_koogle' : koogle_cal(naver_review_likes_count_sum , naver_review_count_sum),
             'user_koogle' : koogle_cal(user_review_likes_count_sum, user_review_count_sum),
@@ -148,8 +244,11 @@ class RestaurantsBaseAPIView(APIView):
             'naver_likes_data' : naver_likes_data,
             'user_likes_data' : user_likes_data,
             'restaurant_map_url' : restaurant_base.map_link,
-            'restaurant_menu' : menus,
-            
+            #'restaurant_menu' : menus,
+            #'restaurant_image': restaurant_base.image,
+
         }
-        return Response(data)
+        translated_data = translate_data(data.copy())  # 원본 데이터 복사해서 번역
+
+        return Response(translated_data)
 

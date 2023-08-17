@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-
 from Restaurants.models import Category, Food
+
 
 class Command(BaseCommand):
     help = 'Initialize categories, foods'

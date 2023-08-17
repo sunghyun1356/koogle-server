@@ -2,7 +2,6 @@ from django.db import models
 
 class Category(models.Model):
     name = models.CharField(max_length=100, verbose_name="category_name")
-    image = models.ImageField(upload_to="restaurants/category-img/", default='restaurants/category/default_image.jpeg')
     def __str__(self):
         return self.name
 
@@ -14,7 +13,6 @@ class Category(models.Model):
 class Food(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="food_category")
     name = models.CharField(max_length=100, verbose_name="Food_name")
-    image = models.ImageField(upload_to="restaurants/food-img/", default='restaurants/food/default_image.jpeg')
     def __str__(self):
             return self.name
     
@@ -27,18 +25,20 @@ class Food(models.Model):
 class Restaurant(models.Model):
     name = models.CharField(max_length=100, verbose_name="restaurant_name", null=False)
     address = models.CharField(max_length=200, verbose_name="restaurant_address", null=False)
+
     image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpeg')
     phone = models.CharField(max_length=20, verbose_name="phone", null=True)
+
     map_link = models.URLField(max_length=200)
     latitude = models.FloatField(max_length=100, null=False)
     longitude= models.FloatField(max_length=100, null=False)
     koogle_ranking = models.IntegerField(verbose_name="koogle_ranking", default=0)
+    reservation = models.BooleanField(verbose_name="reservation", default=False)
     reservation_link = models.URLField(verbose_name="reservation_url", null=True, blank=True, unique=True)
-
     def __str__(self):
+
         return self.name
-    
-    
+
 class OpenHours(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='open_hours')
     day = models.CharField(verbose_name='day of the week', max_length=15) # ex. Mon, Tue, Wed
@@ -71,7 +71,7 @@ class OpenHours(models.Model):
 
 class Menu_Detail(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(null=True)
+    image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpg')
     price = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
     content = models.TextField(max_length=1000, verbose_name="menu_detail_content", blank=True, null=True)
     def __str__(self):

@@ -8,15 +8,17 @@ class Review(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="review_restaurant")
     content = models.TextField(max_length= 1000, verbose_name="content", null=False)
-    image_1 = models.ImageField(upload_to="reviews/review-img",null=True)
-    image_2 = models.ImageField(upload_to="reviews/review-img",null=True)
-    image_3 = models.ImageField(upload_to="reviews/review-img", null=True)
+    image_1 = models.ImageField(upload_to="reviews/review-img",default="reviews/review_default-img",null=True)
+    image_2 = models.ImageField(upload_to="reviews/review-img",default="reviews/review_default-img",null=True)
+    image_3 = models.ImageField(upload_to="reviews/review-img",default="reviews/review_default-img", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
     koogle = models.IntegerField(verbose_name="koogle", default=0)
     star = models.IntegerField(verbose_name="star", default=0)
 
     def __str__(self):
         return f'Review of {self.restaurant.name} by {self.user.username}: {self.content[:20]}'
+
     
     @classmethod
     def update_restaurant_reviews(cls, restaurant_instance, reviews):
@@ -59,6 +61,7 @@ class Review_Likes(models.Model):
     def __str__(self):
         restaurant_name = self.review.restaurant.name if self.review.restaurant else "Unknown Restaurant"
         likes_type = self.likes.likes if self.likes else "Unknown Likes Type"
+
         return f"Review: {restaurant_name}'s {likes_type} by {self.review.user.username}"
     
     @classmethod
@@ -81,6 +84,7 @@ class Review_Likes(models.Model):
         for review_like in existing:
             if review_like.likes_id not in latest_like_ids:
                 review_like.delete()
+
 
 class Likes_Restaurant(models.Model):
     likes = models.ForeignKey(Likes, on_delete=models.CASCADE)
