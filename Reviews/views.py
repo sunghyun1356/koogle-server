@@ -32,8 +32,8 @@ from Restaurants.models import *
 from .serializers import *
 from Users.models import *
 load_dotenv()
-client_id = os.getenv('client_id')
-client_secret = os.getenv('client_secret')
+client_id = "A1myJv4j7i0k0jVxswja" # 개발자센터에서 발급받은 Client ID 값
+client_secret = "_7xoqsu5d0" # 개발자센터에서 발급받은 Client Secret 값
 from Papago_API import translate_and_extract
 
 # Create your views here.
