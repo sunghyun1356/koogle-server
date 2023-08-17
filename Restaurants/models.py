@@ -24,7 +24,7 @@ class Food(models.Model):
     
 class Restaurant(models.Model):
     name = models.CharField(max_length=100, verbose_name="restaurant_name", null=False)
-    address = models.CharField(max_length=200, verbose_name="restaurant_address", null=False)
+    address = models.CharField(max_length=200, verbose_name="restaurant_address", null=True)
 
     image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpeg')
     phone = models.CharField(max_length=20, verbose_name="phone", null=True)
