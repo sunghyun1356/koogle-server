@@ -225,7 +225,7 @@ class Command(BaseCommand):
 
             for j in range(len(review_instances)):
                 Review_Likes.update_review_likes(review_instances[j], review_with_likes_only[j]['likes'])
-
+    
     def handle(self, *args, **options):
         sources = [
             TasteOfSeoulScraper, 
@@ -235,6 +235,9 @@ class Command(BaseCommand):
         for src in sources:
             all_restaurants.extend(src().scrape())
 
+        if options['test'] is not None:
+            all_restaurants = all_restaurants[0:2]
+
         # Scrape three restaurants at a time - may have memory issue due to all image files being loaded at once
         for i in range(0, len(all_restaurants), 3):
             restaurants = all_restaurants[i:i+3]
@@ -243,3 +246,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Scraping completed'))
 
         return 0
+    
+    def add_arguments(self, parser):
+        # For optional named arguments, use '--your_argument' or '-y' (short form)
+        parser.add_argument('--test', '-t', action='store_true', help='For test purpose, adds just the first restaurant found from source, to DB')
