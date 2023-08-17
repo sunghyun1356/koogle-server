@@ -32,50 +32,36 @@ from .serializers import *
 # 몇 쿠글로 예상이 되는지 -> 계산 필요 ( 유저와 네이버를 통해서 각각 )
 # 
 
-@api_view(['POST'])
-def get_restaurants_by_food(request):
-    selected_items = request.data.get('selected_items', [])
-    sort_by = request.data.get('sort_by')
+@api_view(['GET'])
+def get_restaurants_by_food(request, food_id):
+    selected_items = request.query_params.getlist('food_id', [])
+    sort_by = request.query_params.get('sort_by')
+    
 
     if not selected_items:
         return Response({"error": "No selected items provided"}, status=400)
 
-    user_latitude = request.data.get('latitude')  # 사용자 위치의 위도
-    user_longitude = request.data.get('longitude')  # 사용자 위치의 경도
+    user_latitude = request.data.get('32')  # 사용자 위치의 위도
+    user_longitude = request.data.get('-123')  # 사용자 위치의 경도
 
     restaurants = Restaurant.objects.filter(
-        restaurant_food__food__id__in=selected_items
+        restaurant_food_restaurant__food__id__in=selected_items
     )
 
-    # 거리순 정렬
-    if sort_by == 'distance':
-        restaurants = sorted(
-            restaurants,
-            key=lambda restaurant: distance(
-                (user_latitude, user_longitude),
-                (restaurant.latitude, restaurant.longitude)
-            ).m
-        )
 
-    #거리순 정렬
     if sort_by == 'distance':
-        restaurants = sorted(
-            restaurants,
-            key=lambda restaurant: great_circle(
-                (restaurant.latitude, restaurant.longitude),
-                (user_latitude, user_longitude)
-            ).meters
-        )
         # 거리를 계산하여 응답 데이터에 추가
         serialized_data = []
         for restaurant in restaurants:
+            restaurant_latitude = restaurant.latitude
+            restaurant_longitude = restaurant.longitude
             distance = great_circle(
-                (restaurant.latitude, restaurant.longitude),
+                (restaurant_latitude, restaurant_longitude),
                 (user_latitude, user_longitude)
             ).meters
             serialized_data.append({
                 "restaurant_info": RestaurantBaseSerializer(restaurant).data,
-                "distance": distance  # 거리 정보를 추가
+                "distance": distance  
             })
 
     #평점순 정렬
