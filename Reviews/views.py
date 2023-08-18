@@ -570,3 +570,7 @@ class ReviewListInfoAPIView(ListCreateAPIView):
                        
 
         
+        if restaurant_base.name in translated_restaurants_name:
+            restaurant_base.name = translated_restaurants_name[restaurant_name]
+        else:
+            restaurant_base.name = translate_and_extract(restaurant_base.name) 
