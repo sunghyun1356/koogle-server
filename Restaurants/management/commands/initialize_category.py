@@ -4,7 +4,6 @@ from Restaurants.models import Category, Food
 
 class Command(BaseCommand):
     help = 'Initialize categories, foods'
-
     categories = {
         '한식': [
             '떡볶이', 

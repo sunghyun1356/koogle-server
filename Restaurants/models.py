@@ -26,7 +26,7 @@ class Restaurant(models.Model):
     name = models.CharField(max_length=100, verbose_name="restaurant_name", null=False)
     address = models.CharField(max_length=200, verbose_name="restaurant_address", null=True)
 
-    image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpeg')
+    image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant_default_image')
     phone = models.CharField(max_length=20, verbose_name="phone", null=True)
 
     map_link = models.URLField(max_length=200)
@@ -71,7 +71,7 @@ class OpenHours(models.Model):
 
 class Menu_Detail(models.Model):
     name = models.CharField(max_length=100)
-    image = models.ImageField(upload_to="restaurants/restaurant-main-img/", default='restaurants/restaurant/default_image.jpg')
+    image = models.ImageField(upload_to="restaurants/menus/menu-main-img/", default='restaurants/menus/menu_default_image.jpg')
     price = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
     content = models.TextField(max_length=1000, verbose_name="menu_detail_content", blank=True, null=True)
     def __str__(self):
