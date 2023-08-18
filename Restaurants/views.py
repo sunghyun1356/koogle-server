@@ -322,7 +322,7 @@ def get_restaurants_by_food(request, food_id):
 class MainpageAPIView(APIView):
     qeuryset = Food.objects.all()
     serializers = CategoryFoodSerializer
-    serializers_permission = [AllowAny]
+    permission_classes = [AllowAny]
     def get(self, request):
         data ={}
         categories = Category.objects.all()
@@ -334,6 +334,34 @@ class MainpageAPIView(APIView):
                 data[category.name] =food_listing.id
             data[category.name] = food_data
         return Response({"data" : data})
+
+class FoodSelectedRestaurantsAPIView(APIView):
+        queryset = Restaurant.objects.all()
+        serializers = FoodSelectedRestaurantSerializer
+        permission_classes = [AllowAny]
+        def get(self, request, food_ids):
+            selected_items = request.query_params.getlist('food_ids', [])
+            food_ids = [int(food_id) for food_id in selected_items if food_id.isdigit()]
+            restaurants_list = []
+            for food_ids_list in food_ids:
+                selected_restaurants = Restaurant.objects.filter(food__id=food_ids_list)
+                for rest in selected_restaurants:
+                    restaurants_list.append(rest)
+            restaurants_list = list(set(restaurants_list))
+            # 레스토랑 이름, 주소, 번호, 거리, 쿠글
+            data = {}
+            for each_restaurants in restaurants_list:
+                each_restaurants_name = translate_and_extract()
+                restaurant_data ={}
+                if  each_restaurants_name in translated_restaurants_name:
+                    restaurant_base.name = translated_restaurants_name[restaurant_name]
+                else:
+                    restaurant_base.name = translate_and_extract(restaurant_base.name)
+
+            
+            
+
+
 
 
 
@@ -349,14 +377,6 @@ def search_restaurants(request):
     else:
         return Response([])
     
-
-
-def restaurant_detail(request, restaurant_id):
-    restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
-    restaurant.visit_count += 1
-    restaurant.save()
-    
-    return render(request, 'restaurant_detail.html', {'restaurant': restaurant})
 
 
 
