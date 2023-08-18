@@ -491,7 +491,8 @@ class ReviewListInfoAPIView(ListCreateAPIView):
             'restaurant_name': restaurant_base.name,
                 'address': restaurant_base.address,
                 'total_review': Review.objects.filter(restaurant=restaurant_base).count(),
-                'avg_star' : Review.objects.filter(restaurant=restaurant_base).aggregate(Avg('star'))['star__avg'],}
+                'avg_star' : Review.objects.filter(restaurant=restaurant_base).aggregate(Avg('star'))['star__avg'],
+        }
         data = {
             'restaurants_info' : restaurants_info,
             'naver_reviews': naver_reviews_data,

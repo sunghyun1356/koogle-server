@@ -330,8 +330,9 @@ class MainpageAPIView(APIView):
             food_list = Food.objects.filter(category=category)
             food_data = {}
             for food_listing in food_list:
-                category.name = translate_and_extract(category.name)
-                data[category.name] =food_listing.id
+                food_listing.name = translate_and_extract(food_listing.name)
+                food_data[food_listing.name] =food_listing.id
+            category.name = translate_and_extract(category.name)
             data[category.name] = food_data
         return Response({"data" : data})
 
@@ -351,12 +352,28 @@ class FoodSelectedRestaurantsAPIView(APIView):
             # 레스토랑 이름, 주소, 번호, 거리, 쿠글
             data = {}
             for each_restaurants in restaurants_list:
-                each_restaurants_name = translate_and_extract()
                 restaurant_data ={}
-                if  each_restaurants_name in translated_restaurants_name:
-                    restaurant_base.name = translated_restaurants_name[restaurant_name]
+                if  each_restaurants.name in translated_restaurants_name:
+                    each_restaurants.name = translated_restaurants_name[each_restaurants.name]
                 else:
-                    restaurant_base.name = translate_and_extract(restaurant_base.name)
+                    each_restaurants.name = translate_and_extract(each_restaurants.name)
+                restaurant_data["name"] : each_restaurants.name
+                each_restaurants.address = translate_and_extract(each_restaurants.address)
+                restaurant_data["address"] : each_restaurants.address
+                restaurant_data["phone"] : each_restaurants.phone
+                restaurant_data["image"] : each_restaurants.image
+                restaurant_data["koogle"] : each_restaurants.koogle_ranking
+                current_latitude = 37.5508
+                current_longtitude =126.9255
+            #계산
+                restaurant_latitude = each_restaurants.latitude
+                restaurant_longtitude = each_restaurants.longtitude
+                distance = geopy.distance.distance((current_latitude,current_longtitude), (restaurant_latitude,restaurant_longtitude)).m                
+                restaurant_data["distance"] : distance
+                data[each_restaurants.name] = restaurant_data
+            return Response({"data" : data})
+        
+                
 
             
             
@@ -514,6 +531,7 @@ class RestaurantsBaseAPIView(APIView):
         data = {
             #이미지 파일 넣으면 postman에서 오류떠서 나중에 넣을게욤
             # 완료
+            
             'name' : restaurant_base.name,
 
             'phone' : restaurant_base.phone,
@@ -541,6 +559,8 @@ class RestaurantsBaseAPIView(APIView):
             'restaurant_menu' : menus,
 
             'restaurant_image': restaurant_base.image,
+            'restaurant_latitude': restaurant_base.latitude,
+            'restaurant_longtitude': restaurant_base.longitude,
 
         }
 
