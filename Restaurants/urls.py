@@ -6,7 +6,7 @@ router = DefaultRouter()
 
 
 urlpatterns =[
-    path('food/<int:food_id>/restaurants/', views.get_restaurants_by_food),
+    path('food/<str:food_id>/restaurants/', views.get_restaurants_by_food),
     path('', MainpageAPIView.as_view(), name='main_page'),
     path('<str:restaurant_name>/', RestaurantsBaseAPIView.as_view()),
     path('search/', views.search_restaurants, name='search_restaurants'), #검색
